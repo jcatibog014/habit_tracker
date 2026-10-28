@@ -193,7 +193,7 @@ def demo():
     user = demo_user(now())
     db.commit()
     log_in(user)
-    flash("Welcome to the demo! These habits are made up, so feel free to try anything.")
+    flash("Welcome to the demo! These habits are made up and start fresh every hour, so feel free to try anything.")
     return redirect(url_for("main.home"))
 
 

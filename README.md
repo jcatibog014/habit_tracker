@@ -5,7 +5,9 @@
 - Add your habits: "Drink water", "Read", "Walk"…
 - A habit can be **yes or no** ("Did I pray today?") or a **count** ("8 glasses of water").
 - A habit can be for **every day**, **some days** (Mon, Wed, Fri) or **some times a week**.
-- Soon: tick your habits every day, keep your **streak** 🔥, and see your progress.
+- On the **Today** page, tap the big round button to tick a habit. The ring at the top shows how much of today is done.
+- Drag the dots ⠿ on the Habits page to change the order.
+- Soon: keep your **streak** 🔥 and see your progress over weeks and months.
 
 The app is still being built. The plan is in [docs/PLAN.md](docs/PLAN.md).
 

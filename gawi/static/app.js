@@ -44,6 +44,14 @@ function setUpConfirms() {
   });
 }
 
+// ---------- Closing a message ----------
+
+function setUpFlashClose() {
+  document.querySelectorAll("[data-close-flash]").forEach((button) => {
+    button.addEventListener("click", () => button.closest(".flash").remove());
+  });
+}
+
 // ---------- Show only the fields that matter ----------
 // <div data-show-when="kind=count"> shows only while the radio "kind" is "count".
 // Without JavaScript every field shows, and the server ignores the unused ones.
@@ -62,8 +70,166 @@ function setUpShowWhen() {
   update();
 }
 
+// ---------- Screen reader messages ----------
+// Pages with a <p aria-live="polite" id="live"> read out what just changed.
+
+function announce(text) {
+  const live = document.getElementById("live");
+  if (live) live.textContent = text;
+}
+
+// Play a CSS animation class once (it is removed when the animation ends).
+function playOnce(element, className) {
+  element.classList.remove(className);
+  void element.offsetWidth; // forget the old animation, so it can play again
+  element.classList.add(className);
+  element.addEventListener("animationend", () => element.classList.remove(className), { once: true });
+}
+
+// ---------- Ticking habits on the Today page ----------
+// Each <form data-checkin> is sent with fetch(), and the answer (JSON) updates
+// the card and the progress ring. Taps on one card wait for each other, so
+// fast taps on "+" all count.
+
+function updateCard(card, data) {
+  const wasDone = card.classList.contains("is-done");
+  card.classList.toggle("is-done", data.done);
+  card.querySelector("[data-line]").textContent = data.line;
+  const check = card.querySelector("[data-check]");
+  check.style.setProperty("--percent", data.percent);
+  const count = card.querySelector("[data-count]");
+  if (count) {
+    count.textContent = data.value;
+    check.setAttribute("aria-label", `Add one: ${card.dataset.name}, ${data.line}`);
+  } else {
+    check.setAttribute("aria-pressed", String(data.done));
+  }
+  const minus = card.querySelector("[data-minus]");
+  if (minus) minus.disabled = data.value === 0;
+  if (data.done && !wasDone) playOnce(card, "just-done");
+  return data.done && !wasDone;
+}
+
+function updateSummary(summary) {
+  const hero = document.querySelector("[data-hero]");
+  if (!hero) return;
+  const wasPerfect = hero.classList.contains("is-perfect");
+  const isPerfect = summary.total > 0 && summary.done === summary.total;
+  hero.querySelector("[data-done]").textContent = summary.done;
+  hero.querySelector("[data-total]").textContent = summary.total;
+  hero.querySelector("[data-message]").textContent = summary.message;
+  const ring = hero.querySelector("[data-ring]");
+  ring.style.setProperty("--percent", summary.percent);
+  ring.setAttribute("aria-label", `${summary.done} of ${summary.total} done today`);
+  hero.classList.toggle("is-perfect", isPerfect);
+  if (isPerfect && !wasPerfect) playOnce(hero, "celebrate");
+}
+
+async function sendCheckin(form, card) {
+  // getAttribute, not form.action: the form has a field named "action", which hides that property.
+  const response = await fetch(form.getAttribute("action"), {
+    method: "POST",
+    body: new FormData(form),
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const data = await response.json();
+  const justDone = updateCard(card, data);
+  updateSummary(data.summary);
+  announce(`${card.dataset.name}: ${justDone ? "done! " : ""}${data.line}. ${data.summary.message}`);
+}
+
+function setUpCheckins() {
+  document.querySelectorAll("form[data-checkin]").forEach((form) => {
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const card = form.closest("[data-habit]");
+      playOnce(form.querySelector("button"), "pressed");
+      card.queue = (card.queue || Promise.resolve())
+        .then(() => sendCheckin(form, card))
+        .catch(() => announce("That didn't save. Please check your connection and try again."));
+    });
+  });
+}
+
+// ---------- Reordering habits by dragging ----------
+// Grab a handle (the six dots) and move it up or down; the other habits make
+// room. With the keyboard, focus a handle and press the up or down arrow.
+// The new order is saved right away.
+
+function setUpReorder() {
+  const list = document.querySelector("[data-reorder]");
+  if (!list) return;
+  const order = () => [...list.children].map((item) => item.dataset.id).join(",");
+
+  const save = (item) => {
+    const position = [...list.children].indexOf(item) + 1;
+    announce(`${item.dataset.name} moved to place ${position} of ${list.children.length}.`);
+    const body = new FormData();
+    body.append("csrf_token", list.dataset.csrf);
+    body.append("order", order());
+    fetch(list.dataset.url, { method: "POST", body, headers: { Accept: "application/json" } })
+      .then((response) => { if (!response.ok) throw new Error(); })
+      .catch(() => announce("The new order didn't save. Please reload the page and try again."));
+  };
+
+  list.querySelectorAll("[data-handle]").forEach((handle) => {
+    const item = handle.closest("li");
+
+    handle.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      // We listen on the whole window: moving the item in the page would
+      // cancel a pointer capture on the handle, and the drag would stop.
+      const before = order();
+      item.classList.add("dragging");
+      list.classList.add("is-sorting");
+
+      const move = (moveEvent) => {
+        // Put the item before the first other item whose middle is below the pointer.
+        const others = [...list.children].filter((other) => other !== item);
+        const next = others.find((other) => {
+          const box = other.getBoundingClientRect();
+          return moveEvent.clientY < box.top + box.height / 2;
+        });
+        if (next) {
+          if (next !== item.nextElementSibling) list.insertBefore(item, next);
+        } else if (item !== list.lastElementChild) {
+          list.appendChild(item);
+        }
+      };
+      const stop = () => {
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", stop);
+        window.removeEventListener("pointercancel", stop);
+        item.classList.remove("dragging");
+        list.classList.remove("is-sorting");
+        if (order() !== before) save(item);
+      };
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", stop);
+      window.addEventListener("pointercancel", stop);
+    });
+
+    handle.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowUp" && item.previousElementSibling) {
+        list.insertBefore(item, item.previousElementSibling);
+      } else if (event.key === "ArrowDown" && item.nextElementSibling) {
+        list.insertBefore(item.nextElementSibling, item);
+      } else {
+        return;
+      }
+      event.preventDefault();
+      handle.focus(); // moving the element can drop the focus
+      save(item);
+    });
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   setUpThemeToggle();
   setUpConfirms();
+  setUpFlashClose();
   setUpShowWhen();
+  setUpCheckins();
+  setUpReorder();
 });

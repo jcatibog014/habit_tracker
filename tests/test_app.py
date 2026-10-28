@@ -38,6 +38,16 @@ def test_every_page_has_the_logo_and_tabs(owner_client):
     assert 'class="logo"' in page and 'aria-current="page"' in page and "Settings" in page
 
 
+def test_the_emoji_font_has_every_icon(client):
+    from urllib.parse import unquote
+
+    from gawi import EMOJI_FONT_URL
+    from gawi.validation import ICONS
+    text = unquote(EMOJI_FONT_URL.split("text=")[1])
+    assert all(icon in text for icon in ICONS)
+    assert EMOJI_FONT_URL in client.get("/login").get_data(as_text=True).replace("&amp;", "&")
+
+
 def test_on_render_a_real_secret_key_and_database_are_needed(monkeypatch):
     monkeypatch.setenv("RENDER", "true")
     monkeypatch.delenv("SECRET_KEY", raising=False)

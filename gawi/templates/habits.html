@@ -1,37 +1,36 @@
 {% extends "base.html" %}
-{% from "_macros.html" import habit_icon %}
+{% from "_macros.html" import habit_icon, fab, empty_ideas %}
 {% block title %}Your habits · {{ APP_NAME }}{% endblock %}
 {% block content %}
 <div class="page-title">
   <h1>Your habits</h1>
-  {% if habits %}
-    <a class="button" href="{{ url_for('habits.new') }}"><span aria-hidden="true">＋</span> New habit</a>
-  {% endif %}
 </div>
 
 {% if not habits %}
-  {# The first visit: make starting feel easy. #}
-  <section class="card empty-state" aria-labelledby="empty-title">
-    <p class="empty-emoji" aria-hidden="true">🌱</p>
-    <h2 id="empty-title">Start with one small habit</h2>
-    <p>Pick something easy you'd like to do every day. Small steps add up!</p>
-    <ul class="suggestions" aria-label="Ideas">
-      {% for name, (icon, color, kind, target, unit) in suggestions.items() %}
-        <li>
-          <a class="chip" style="--habit: var(--habit-{{ color }})"
-             href="{{ url_for('habits.new', suggestion=name) }}">
-            <span aria-hidden="true">{{ icon }}</span> {{ name }}
-          </a>
-        </li>
-      {% endfor %}
-    </ul>
-    <a class="button" href="{{ url_for('habits.new') }}">Make your own</a>
-  </section>
+  {{ empty_ideas(suggestions) }}
 {% else %}
-  <p class="page-intro">{{ habits | length }} habit{{ '' if habits | length == 1 else 's' }} on your list. Use the arrows to put the most important ones first.</p>
-  <ol class="habit-list">
+  <p class="page-intro">
+    {{ habits | length }} habit{{ '' if habits | length == 1 else 's' }}.
+    <span class="js-only">Drag
+      <svg class="handle-hint" viewBox="0 0 24 24" width="16" height="16" aria-label="the dots" role="img">
+        {% for y in [6, 12, 18] %}<circle cx="9" cy="{{ y }}" r="2" fill="currentColor"/><circle cx="15" cy="{{ y }}" r="2" fill="currentColor"/>{% endfor %}
+      </svg>
+      to put the most important ones first.</span>
+  </p>
+  {# app.js makes the handles work: drag with a mouse or finger, or focus one and use the arrow keys. #}
+  <ol class="habit-list" data-reorder data-url="{{ url_for('habits.reorder') }}" data-csrf="{{ csrf_token() }}">
     {% for habit in habits %}
-      <li class="habit-row" id="habit-{{ habit.id }}" style="--habit: var(--habit-{{ habit.color }})">
+      <li class="habit-row" id="habit-{{ habit.id }}" data-id="{{ habit.id }}" data-name="{{ habit.name }}"
+          style="--habit: var(--habit-{{ habit.color }})">
+        <button type="button" class="drag-handle js-only" data-handle
+                aria-label="Move {{ habit.name }}. Use the up and down arrow keys.">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            {% for y in [6, 12, 18] %}
+              <circle cx="9" cy="{{ y }}" r="1.7" fill="currentColor"/>
+              <circle cx="15" cy="{{ y }}" r="1.7" fill="currentColor"/>
+            {% endfor %}
+          </svg>
+        </button>
         {{ habit_icon(habit) }}
         <a class="habit-main" href="{{ url_for('habits.edit', habit_id=habit.id) }}">
           <span class="habit-name">{{ habit.name }}</span>
@@ -40,27 +39,17 @@
             {% if habit.start_date > habit.created_at %} · starts {{ habit.start_date | short_date }}{% endif %}
           </span>
         </a>
-        <div class="row-actions">
-          {% set first, last = loop.first, loop.last %}
-          {% for direction, path, label in [('up', 'm6 15 6-6 6 6', 'Move up'), ('down', 'm6 9 6 6 6-6', 'Move down')] %}
-            <form method="post" action="{{ url_for('habits.move', habit_id=habit.id) }}">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <input type="hidden" name="direction" value="{{ direction }}">
-              <button type="submit" class="icon-button"
-                      aria-label="{{ label }}: {{ habit.name }}"
-                      {% if (direction == 'up' and first) or (direction == 'down' and last) %}disabled{% endif %}>
-                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-                  <path d="{{ path }}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
-            </form>
-          {% endfor %}
-          <a class="button button-secondary small edit-button" href="{{ url_for('habits.edit', habit_id=habit.id) }}"
-             aria-label="Edit {{ habit.name }}">Edit</a>
-        </div>
+        <a class="icon-button quiet edit-button" href="{{ url_for('habits.edit', habit_id=habit.id) }}"
+           aria-label="Edit {{ habit.name }}">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            <path d="m13.5 6.5 4 4" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </a>
       </li>
     {% endfor %}
   </ol>
+  <p class="visually-hidden" aria-live="polite" id="live"></p>
 {% endif %}
 
 {% if archived %}
@@ -92,3 +81,5 @@
   </details>
 {% endif %}
 {% endblock %}
+
+{% block fab %}{{ fab() }}{% endblock %}
