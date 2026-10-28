@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% from "_macros.html" import habit_icon %}
+{% block title %}Your habits · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-title">
+  <h1>Your habits</h1>
+  {% if habits %}
+    <a class="button" href="{{ url_for('habits.new') }}"><span aria-hidden="true">＋</span> New habit</a>
+  {% endif %}
+</div>
+
+{% if not habits %}
+  {# The first visit: make starting feel easy. #}
+  <section class="card empty-state" aria-labelledby="empty-title">
+    <p class="empty-emoji" aria-hidden="true">🌱</p>
+    <h2 id="empty-title">Start with one small habit</h2>
+    <p>Pick something easy you'd like to do every day. Small steps add up!</p>
+    <ul class="suggestions" aria-label="Ideas">
+      {% for name, (icon, color, kind, target, unit) in suggestions.items() %}
+        <li>
+          <a class="chip" style="--habit: var(--habit-{{ color }})"
+             href="{{ url_for('habits.new', suggestion=name) }}">
+            <span aria-hidden="true">{{ icon }}</span> {{ name }}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+    <a class="button" href="{{ url_for('habits.new') }}">Make your own</a>
+  </section>
+{% else %}
+  <p class="page-intro">{{ habits | length }} habit{{ '' if habits | length == 1 else 's' }} on your list. Use the arrows to put the most important ones first.</p>
+  <ol class="habit-list">
+    {% for habit in habits %}
+      <li class="habit-row" id="habit-{{ habit.id }}" style="--habit: var(--habit-{{ habit.color }})">
+        {{ habit_icon(habit) }}
+        <a class="habit-main" href="{{ url_for('habits.edit', habit_id=habit.id) }}">
+          <span class="habit-name">{{ habit.name }}</span>
+          <span class="habit-meta">
+            {{ habit | schedule }}{% if habit | goal %} · {{ habit | goal }}{% endif %}
+            {% if habit.start_date > habit.created_at %} · starts {{ habit.start_date | short_date }}{% endif %}
+          </span>
+        </a>
+        <div class="row-actions">
+          {% set first, last = loop.first, loop.last %}
+          {% for direction, path, label in [('up', 'm6 15 6-6 6 6', 'Move up'), ('down', 'm6 9 6 6 6-6', 'Move down')] %}
+            <form method="post" action="{{ url_for('habits.move', habit_id=habit.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="direction" value="{{ direction }}">
+              <button type="submit" class="icon-button"
+                      aria-label="{{ label }}: {{ habit.name }}"
+                      {% if (direction == 'up' and first) or (direction == 'down' and last) %}disabled{% endif %}>
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                  <path d="{{ path }}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </form>
+          {% endfor %}
+          <a class="button button-secondary small edit-button" href="{{ url_for('habits.edit', habit_id=habit.id) }}"
+             aria-label="Edit {{ habit.name }}">Edit</a>
+        </div>
+      </li>
+    {% endfor %}
+  </ol>
+{% endif %}
+
+{% if archived %}
+  <details class="card archived">
+    <summary>Archived ({{ archived | length }})</summary>
+    <p class="muted">These are hidden from your days, but their history is kept. Bring one back any time.</p>
+    <ul class="habit-list">
+      {% for habit in archived %}
+        <li class="habit-row is-archived" style="--habit: var(--habit-{{ habit.color }})">
+          {{ habit_icon(habit) }}
+          <span class="habit-main">
+            <span class="habit-name">{{ habit.name }}</span>
+            <span class="habit-meta">Archived {{ habit.archived_at | short_date }}</span>
+          </span>
+          <div class="row-actions">
+            <form method="post" action="{{ url_for('habits.archive', habit_id=habit.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="button button-secondary small">Bring back</button>
+            </form>
+            <form method="post" action="{{ url_for('habits.delete', habit_id=habit.id) }}"
+                  data-confirm="Delete {{ habit.name }} and all its history? This can't be undone.">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="button button-danger small">Delete</button>
+            </form>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  </details>
+{% endif %}
+{% endblock %}
