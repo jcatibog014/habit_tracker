@@ -1,0 +1,173 @@
+"""The Habits tab: the list, add, edit, archive, delete and reorder."""
+from flask import Blueprint, flash, g, redirect, render_template, request, url_for
+
+from .. import db
+from ..auth import login_required
+from ..validation import (
+    COLOR_LABELS, COLORS, ICONS, KINDS, SCHEDULES, habit_form_values, validate_habit,
+)
+from . import owned_habit, user_today
+
+bp = Blueprint("habits", __name__, url_prefix="/habits")
+
+# Ideas on the empty list, to make the first habit one tap away:
+# name -> (icon, colour, kind, target, unit).
+SUGGESTIONS = {
+    "Drink water": ("💧", "blue", "count", 8, "glasses"),
+    "Walk": ("🚶", "green", "check", 1, ""),
+    "Read": ("📚", "violet", "count", 10, "pages"),
+    "Pray": ("🙏", "gold", "check", 1, ""),
+    "Sleep by 10 PM": ("😴", "teal", "check", 1, ""),
+    "Stretch": ("🧘", "pink", "check", 1, ""),
+}
+
+
+def active_habits():
+    return db.query(
+        "SELECT * FROM habits WHERE user_id = ? AND archived_at IS NULL ORDER BY position, id",
+        (g.user["id"],),
+    )
+
+
+def taken_names(except_id=None):
+    """The lower-cased names of the user's other habits."""
+    rows = db.query("SELECT id, name FROM habits WHERE user_id = ?", (g.user["id"],))
+    return {row["name"].lower() for row in rows if row["id"] != except_id}
+
+
+def read_form():
+    """The form as a dict, with the ticked weekday boxes as a list."""
+    return {**request.form.to_dict(), "weekdays": request.form.getlist("weekdays")}
+
+
+def form_page(values, errors, habit=None):
+    return render_template(
+        "habit_form.html", values=values, errors=errors, habit=habit,
+        icons=ICONS, colors=COLORS, color_labels=COLOR_LABELS, kinds=KINDS, schedules=SCHEDULES,
+    ), 400 if errors else 200
+
+
+@bp.get("")
+@login_required
+def index():
+    archived = db.query(
+        "SELECT * FROM habits WHERE user_id = ? AND archived_at IS NOT NULL ORDER BY archived_at DESC, name",
+        (g.user["id"],),
+    )
+    return render_template(
+        "habits.html", habits=active_habits(), archived=archived, suggestions=SUGGESTIONS,
+    )
+
+
+@bp.route("/new", methods=["GET", "POST"])
+@login_required
+def new():
+    today = user_today()
+    if request.method == "POST":
+        data, errors = validate_habit(read_form(), taken_names(), today)
+        if errors:
+            return form_page(read_form(), errors)
+        position = db.query_one(
+            "SELECT COALESCE(MAX(position), -1) + 1 AS next FROM habits WHERE user_id = ?",
+            (g.user["id"],),
+        )["next"]
+        db.execute(
+            """INSERT INTO habits (user_id, name, icon, color, kind, target, unit, schedule,
+                                   weekdays, per_week, start_date, position, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (g.user["id"], data["name"], data["icon"], data["color"], data["kind"], data["target"],
+             data["unit"], data["schedule"], data["weekdays"], data["per_week"], data["start_date"],
+             position, today.isoformat()),
+        )
+        db.commit()
+        flash(f"{data['icon']} {data['name']} is on your list. Small steps, every day! 🌱")
+        return redirect(url_for("habits.index"))
+
+    # A new form: a friendly default, or one of the suggestions filled in.
+    used_colors = {habit["color"] for habit in active_habits()}
+    values = {
+        "icon": ICONS[0],
+        "color": next((c for c in COLORS if c not in used_colors), COLORS[0]),
+        "kind": "check", "schedule": "daily", "weekdays": [], "per_week": 3,
+        "start_date": today.isoformat(),
+    }
+    name = request.args.get("suggestion", "")
+    if name in SUGGESTIONS:
+        icon, color, kind, target, unit = SUGGESTIONS[name]
+        values.update(name=name, icon=icon, color=color, kind=kind, unit=unit,
+                      target=target if kind == "count" else "")
+    return form_page(values, {})
+
+
+@bp.route("/<int:habit_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit(habit_id):
+    habit = owned_habit(habit_id)
+    if request.method == "POST":
+        data, errors = validate_habit(read_form(), taken_names(except_id=habit_id), user_today())
+        if errors:
+            return form_page(read_form(), errors, habit)
+        db.execute(
+            """UPDATE habits SET name = ?, icon = ?, color = ?, kind = ?, target = ?, unit = ?,
+                                 schedule = ?, weekdays = ?, per_week = ?, start_date = ?
+               WHERE id = ? AND user_id = ?""",
+            (data["name"], data["icon"], data["color"], data["kind"], data["target"], data["unit"],
+             data["schedule"], data["weekdays"], data["per_week"], data["start_date"],
+             habit_id, g.user["id"]),
+        )
+        db.commit()
+        flash(f"Saved {data['icon']} {data['name']}.")
+        return redirect(url_for("habits.index"))
+    return form_page(habit_form_values(habit), {}, habit)
+
+
+@bp.post("/<int:habit_id>/archive")
+@login_required
+def archive(habit_id):
+    """Archive a habit (hide it, keep its history), or bring an archived one back."""
+    habit = owned_habit(habit_id)
+    if habit["archived_at"]:
+        # Back at the end of the list.
+        position = db.query_one(
+            "SELECT COALESCE(MAX(position), -1) + 1 AS next FROM habits WHERE user_id = ?",
+            (g.user["id"],),
+        )["next"]
+        db.execute("UPDATE habits SET archived_at = NULL, position = ? WHERE id = ?", (position, habit_id))
+        flash(f"Welcome back, {habit['icon']} {habit['name']}! 💪")
+    else:
+        db.execute("UPDATE habits SET archived_at = ? WHERE id = ?", (user_today().isoformat(), habit_id))
+        flash(f"Archived {habit['icon']} {habit['name']}. Its history is kept.")
+    db.commit()
+    return redirect(url_for("habits.index"))
+
+
+@bp.post("/<int:habit_id>/delete")
+@login_required
+def delete(habit_id):
+    habit = owned_habit(habit_id)
+    # ON DELETE CASCADE removes its check-ins too.
+    db.execute("DELETE FROM habits WHERE id = ? AND user_id = ?", (habit_id, g.user["id"]))
+    db.commit()
+    flash(f"Deleted {habit['icon']} {habit['name']} and its history.")
+    return redirect(url_for("habits.index"))
+
+
+@bp.post("/<int:habit_id>/move")
+@login_required
+def move(habit_id):
+    """Move a habit one place up or down the list."""
+    owned_habit(habit_id)
+    habits = active_habits()
+    ids = [habit["id"] for habit in habits]
+    if habit_id in ids:
+        index = ids.index(habit_id)
+        other = index - 1 if request.form.get("direction") == "up" else index + 1
+        if 0 <= other < len(ids):
+            ids[index], ids[other] = ids[other], ids[index]
+            # Number them 0, 1, 2... again, so there are never two at the same place.
+            db.execute_many(
+                "UPDATE habits SET position = ? WHERE id = ?",
+                [(position, row_id) for position, row_id in enumerate(ids)],
+            )
+            db.commit()
+    return redirect(url_for("habits.index", _anchor=f"habit-{habit_id}"))

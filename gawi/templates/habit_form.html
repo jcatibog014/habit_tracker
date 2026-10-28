@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% from "_macros.html" import input, field_error, invalid %}
+{% set title = "Edit " ~ habit.name if habit else "New habit" %}
+{% block title %}{{ title }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<a class="back-link" href="{{ url_for('habits.index') }}"><span aria-hidden="true">‹</span> Your habits</a>
+<div class="page-title">
+  <h1>{{ title }}</h1>
+</div>
+
+{% if errors %}
+  <p class="form-error" role="alert">Almost there! Please fix the {{ 'field' if errors | length == 1 else 'fields' }} marked below.</p>
+{% endif %}
+
+<form method="post" class="card form habit-form" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  {{ input("name", "Name", values, errors, required=true, maxlength=40, autocomplete="off",
+           placeholder="Drink water, Read, Walk…", autofocus=(not habit)) }}
+
+  <fieldset class="field">
+    <legend>Icon</legend>
+    <div class="icon-grid"{{ invalid(errors, 'icon') }}>
+      {% for icon in icons %}
+        <label class="icon-choice">
+          <input type="radio" name="icon" value="{{ icon }}" {% if values.icon == icon %}checked{% endif %}>
+          <span aria-hidden="true">{{ icon }}</span>
+        </label>
+      {% endfor %}
+    </div>
+    {{ field_error(errors, 'icon') }}
+  </fieldset>
+
+  <fieldset class="field">
+    <legend>Colour</legend>
+    <div class="swatches">
+      {% for color in colors %}
+        <label class="swatch" style="--habit: var(--habit-{{ color }})" title="{{ color_labels[color] }}">
+          <input type="radio" name="color" value="{{ color }}" {% if values.color == color %}checked{% endif %}>
+          <span class="visually-hidden">{{ color_labels[color] }}</span>
+        </label>
+      {% endfor %}
+    </div>
+    {{ field_error(errors, 'color') }}
+  </fieldset>
+
+  <fieldset class="field">
+    <legend>How do you track it?</legend>
+    <div class="choice-cards">
+      {% for kind, label, text in [
+           ('check', 'Yes or no', 'Did I do it today? One tap.'),
+           ('count', 'Count', 'Reach a number, like 8 glasses of water.')] %}
+        <label class="choice-card">
+          <input type="radio" name="kind" value="{{ kind }}" {% if values.kind == kind %}checked{% endif %}>
+          <span class="choice-title">{{ label }}</span>
+          <span class="choice-text">{{ text }}</span>
+        </label>
+      {% endfor %}
+    </div>
+    {{ field_error(errors, 'kind') }}
+    <div class="sub-fields" data-show-when="kind=count">
+      {{ input("target", "Goal per day", values, errors, inputmode="numeric", maxlength=4, placeholder="8") }}
+      {{ input("unit", "Unit (optional)", values, errors, maxlength=20, placeholder="glasses") }}
+    </div>
+  </fieldset>
+
+  <fieldset class="field">
+    <legend>When?</legend>
+    <div class="choice-cards three">
+      {% for schedule, label, text in [
+           ('daily', 'Every day', 'The best way to build a habit.'),
+           ('weekdays', 'On some days', 'Like Mon, Wed and Fri.'),
+           ('weekly', 'Some times a week', 'Any days you like.')] %}
+        <label class="choice-card">
+          <input type="radio" name="schedule" value="{{ schedule }}" {% if values.schedule == schedule %}checked{% endif %}>
+          <span class="choice-title">{{ label }}</span>
+          <span class="choice-text">{{ text }}</span>
+        </label>
+      {% endfor %}
+    </div>
+    {{ field_error(errors, 'schedule') }}
+
+    <fieldset class="sub-fields" data-show-when="schedule=weekdays">
+      <legend>Which days?</legend>
+      <div class="day-picker"{{ invalid(errors, 'weekdays') }}>
+        {% for name in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+          {% set number = loop.index | string %}
+          <label class="day-choice">
+            <input type="checkbox" name="weekdays" value="{{ number }}" {% if number in (values.weekdays or []) %}checked{% endif %}>
+            <span>{{ name }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      {{ field_error(errors, 'weekdays') }}
+    </fieldset>
+
+    <div class="sub-fields" data-show-when="schedule=weekly">
+      {{ input("per_week", "Times a week", values, errors, inputmode="numeric", maxlength=1,
+               hint="From 1 to 6. The week starts on Monday.") }}
+    </div>
+  </fieldset>
+
+  {{ input("start_date", "Start date", values, errors, type="date",
+           hint="Days before this don't count, so you start fresh.") }}
+
+  <div class="form-buttons">
+    <button type="submit" class="button">{{ "Save" if habit else "Add habit" }}</button>
+    <a class="button button-secondary" href="{{ url_for('habits.index') }}">Cancel</a>
+  </div>
+</form>
+
+{% if habit %}
+  <section class="card danger-zone" aria-labelledby="more-title">
+    <h2 id="more-title">More</h2>
+    <div class="danger-actions">
+      <form method="post" action="{{ url_for('habits.archive', habit_id=habit.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="button button-secondary">{{ "Bring back" if habit.archived_at else "Archive" }}</button>
+      </form>
+      <p class="muted">Archive hides it from your days but keeps its history.</p>
+      <form method="post" action="{{ url_for('habits.delete', habit_id=habit.id) }}"
+            data-confirm="Delete {{ habit.name }} and all its history? This can't be undone.">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="button button-danger">Delete</button>
+      </form>
+      <p class="muted">Delete removes it and its history for good.</p>
+    </div>
+  </section>
+{% endif %}
+{% endblock %}

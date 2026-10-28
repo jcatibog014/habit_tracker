@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
+  <meta name="description" content="Gawi: build good habits one day at a time. Track daily habits, streaks and your progress.">
+  <meta name="theme-color" content="#ffc58a" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#2a1f4a" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="{{ url_for('static', filename='icons/logo.svg') }}" type="image/svg+xml">
+  {# Fredoka (round and friendly) for headings, Nunito for everything else. Until they arrive, system fonts show. #}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;600;700;800&display=swap">
+  {# No defer: it must run before the page is drawn (see theme-init.js). #}
+  <script src="{{ url_for('static', filename='theme-init.js') }}"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% block head %}{% endblock %}
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to the content</a>
+
+  {# Tabs: (label, endpoint, the blueprint that counts as "this tab", icon). #}
+  {% set tabs = [
+       ('Habits', 'habits.index', 'habits', 'list'),
+       ('Settings', 'auth.settings', 'settings', 'sliders')] %}
+  {% set section = 'settings' if request.endpoint == 'auth.settings' else (request.endpoint or '').split('.')[0] %}
+
+  {# The sunrise bar at the top. #}
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-top">
+        <a class="brand" href="{{ url_for('main.home') }}" aria-label="{{ APP_NAME }}, home">
+          {% include "_logo.html" %}
+          <span>{{ APP_NAME }}</span>
+        </a>
+        <div class="header-actions">
+          <button type="button" class="icon-button" id="theme-toggle" aria-label="Switch to dark theme">
+            {# A moon in light mode (press for dark), a sun in dark mode. CSS shows one. #}
+            <svg class="theme-icon icon-moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" fill="currentColor"/>
+            </svg>
+            <svg class="theme-icon icon-sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <circle cx="12" cy="12" r="4.5" fill="currentColor"/>
+              <path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+          {% if g.user %}
+            <span class="header-user">{{ g.user.username }}</span>
+            <form method="post" action="{{ url_for('auth.logout') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="button button-on-bar">Log out</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+      {% if g.user %}
+        {# On phones this becomes a bar fixed to the bottom of the screen, near your thumb. #}
+        <nav class="site-nav" aria-label="Main">
+          {% for label, endpoint, tab_section, icon in tabs %}
+            <a href="{{ url_for(endpoint) }}" {% if section == tab_section %}aria-current="page"{% endif %}>
+              <svg class="nav-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                {% if icon == 'list' %}
+                  <path d="M9 6h11M9 12h11M9 18h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="m3.5 6 1.2 1.2L7 4.8M3.5 12l1.2 1.2L7 10.8M3.5 18l1.2 1.2L7 16.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                {% elif icon == 'sliders' %}
+                  <path d="M4 7h9M17 7h3M4 17h3M11 17h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <circle cx="15" cy="7" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="9" cy="17" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/>
+                {% endif %}
+              </svg>
+              <span>{{ label }}</span>
+            </a>
+          {% endfor %}
+        </nav>
+      {% endif %}
+    </div>
+  </header>
+
+  {% if g.user and g.user.is_demo %}
+    <p class="demo-banner">You are using the <strong>demo</strong>. These habits are made up, and they start fresh every hour.</p>
+  {% endif %}
+
+  <main id="main" class="page">
+    {% for message in get_flashed_messages() %}
+      <p class="flash" role="status">{{ message }}</p>
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <p>{{ APP_NAME }} · One small step every day ☀️</p>
+  </footer>
+</body>
+</html>

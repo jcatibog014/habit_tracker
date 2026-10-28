@@ -1,0 +1,32 @@
+{# Small pieces that many pages share. Import with:
+   {% from "_macros.html" import input, field_error %} #}
+
+{# The error under a field, if it has one. #}
+{% macro field_error(errors, name) -%}
+  {% if errors.get(name) %}<span class="field-error" id="{{ name }}-error">{{ errors[name] }}</span>{% endif %}
+{%- endmacro %}
+
+{# aria attributes for a field with an error. #}
+{% macro invalid(errors, name) -%}
+  {% if errors.get(name) %} aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}
+{%- endmacro %}
+
+{# A text-like input with its label, hint and error message.
+   Extra HTML attributes go in as keywords: input(..., inputmode="numeric", required=true) #}
+{% macro input(name, label, values, errors, type="text", hint="") -%}
+  {% set error = errors.get(name) %}
+  <label class="field">
+    <span>{{ label }}</span>
+    {% if hint %}<span class="field-hint" id="{{ name }}-hint">{{ hint }}</span>{% endif %}
+    <input name="{{ name }}" id="{{ name }}" type="{{ type }}" value="{{ values.get(name) or '' }}"
+      {%- for key, value in kwargs.items() %}{% if value is sameas true %} {{ key }}{% elif value %} {{ key }}="{{ value }}"{% endif %}{% endfor %}
+      {%- if error or hint %} aria-describedby="{% if hint %}{{ name }}-hint {% endif %}{% if error %}{{ name }}-error{% endif %}"{% endif %}
+      {%- if error %} aria-invalid="true"{% endif %}>
+    {{ field_error(errors, name) }}
+  </label>
+{%- endmacro %}
+
+{# A habit's round icon, in its own colour. #}
+{% macro habit_icon(habit, size="") -%}
+  <span class="habit-icon {{ size }}" style="--habit: var(--habit-{{ habit.color }})" aria-hidden="true">{{ habit.icon }}</span>
+{%- endmacro %}
