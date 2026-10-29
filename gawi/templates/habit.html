@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% from "_macros.html" import habit_icon %}
+{% block title %}{{ habit.name }} · {{ APP_NAME }}{% endblock %}
+{% set unit_one = unit[:-1] %}
+{% block content %}
+<a class="back-link" href="{{ url_for('habits.index') }}"><span aria-hidden="true">‹</span> Your habits</a>
+
+<div class="page-title habit-title" style="--habit: var(--habit-{{ habit.color }})">
+  <div class="habit-heading">
+    {{ habit_icon(habit) }}
+    <div>
+      <h1>{{ habit.name }}</h1>
+      <p class="habit-meta">
+        {% if habit.avoid %}Avoid it · {% endif %}{{ habit | schedule }}{% if habit | goal %} · {{ habit | goal }}{% endif %}
+        · since {{ habit.start_date | short_date }}
+      </p>
+    </div>
+  </div>
+  <a class="icon-button quiet" href="{{ url_for('habits.edit', habit_id=habit.id) }}" aria-label="Edit {{ habit.name }}">
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+      <path d="m13.5 6.5 4 4" stroke="currentColor" stroke-width="2"/>
+    </svg>
+  </a>
+</div>
+
+{% if not started %}
+  <p class="card">This habit starts on {{ habit.start_date | short_date }}. See you then!</p>
+{% endif %}
+
+{# Four numbers, the same size, in one row. #}
+<section class="stat-tiles" aria-label="Numbers" style="--habit: var(--habit-{{ habit.color }})">
+  <div class="stat-tile">
+    <span class="stat-label">Current streak</span>
+    <span class="stat-value">{{ current }} <small>{{ unit_one if current == 1 else unit }}</small></span>
+  </div>
+  <div class="stat-tile">
+    <span class="stat-label">Longest streak</span>
+    <span class="stat-value">{{ longest }} <small>{{ unit_one if longest == 1 else unit }}</small></span>
+  </div>
+  <div class="stat-tile">
+    <span class="stat-label">Last 30 days</span>
+    <span class="stat-value">{{ score if score is not none else '–' }}{% if score is not none %}<small>%</small>{% endif %}</span>
+  </div>
+  <div class="stat-tile">
+    <span class="stat-label">{{ 'Clean days' if habit.avoid else 'Days done' }}</span>
+    <span class="stat-value">{{ total }}</span>
+  </div>
+</section>
+
+<section class="card" aria-labelledby="badges-title" style="--habit: var(--habit-{{ habit.color }})">
+  <h2 id="badges-title">Milestones</h2>
+  <ul class="badges">
+    {% for milestone in milestones %}
+      {% set got = milestone in earned %}
+      <li class="badge{% if got %} is-earned{% endif %}{% if milestone == upcoming %} is-next{% endif %}">
+        <span class="badge-circle"><strong>{{ milestone }}</strong><small>{{ unit }}</small></span>
+        <span class="badge-text">
+          {% if got %}Earned{% elif milestone == upcoming %}{{ to_go }} {{ unit_one if to_go == 1 else unit }} to go{% else %}Locked{% endif %}
+        </span>
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="card" aria-labelledby="year-title" style="--habit: var(--habit-{{ habit.color }})">
+  <h2 id="year-title">The last year</h2>
+  <div class="heatmap-scroll" data-scroll-end>
+    <div class="heatmap" role="img" aria-label="A year of {{ habit.name }}: each square is a day; the darker, the more done.">
+      <div class="heatmap-months" aria-hidden="true">
+        {% for column, name in year_months %}<span style="grid-column: {{ column + 1 }}">{{ name }}</span>{% endfor %}
+      </div>
+      <div class="heatmap-days" aria-hidden="true"><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span><span></span></div>
+      <div class="heatmap-grid">
+        {% for week in year_columns %}
+          {% for c in week %}
+            {% if c %}<span class="heat heat-{{ c.state }} level-{{ c.level }}" title="{{ c.day | short_date }}{% if c.label %}: {{ c.label }}{% endif %}"></span>{% else %}<span class="heat heat-none"></span>{% endif %}
+          {% endfor %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <p class="heat-legend" aria-hidden="true">
+    <span>Less</span>
+    {% for n in range(5) %}<span class="heat heat-done level-{{ n }}{% if n == 0 %} heat-missed{% endif %}"></span>{% endfor %}
+    <span>More</span>
+    <span class="heat heat-rest"></span><span>Rest day</span>
+    {% if habit.avoid %}<span class="heat heat-slipped"></span><span>Slipped</span>{% endif %}
+  </p>
+  <details class="table-toggle">
+    <summary>Show as table</summary>
+    <table class="data-table">
+      <thead><tr><th scope="col">Month</th><th scope="col">{{ 'Clean days' if habit.avoid else 'Days done' }}</th></tr></thead>
+      <tbody>
+        {% for month_first, count in monthly %}
+          <tr><td>{{ month_first.strftime('%B %Y') }}</td><td>{{ count }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </details>
+</section>
+
+<section class="card calendar-card" id="calendar" aria-labelledby="month-title" style="--habit: var(--habit-{{ habit.color }})">
+  <div class="month-nav">
+    <a class="icon-button quiet" href="{{ url_for('habits.detail', habit_id=habit.id, month=previous_month.strftime('%Y-%m'), _anchor='calendar') }}" aria-label="Previous month">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="m15 6-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <h2 id="month-title">{{ month.strftime('%B %Y') }}</h2>
+    {% if next_month %}
+      <a class="icon-button quiet" href="{{ url_for('habits.detail', habit_id=habit.id, month=next_month.strftime('%Y-%m'), _anchor='calendar') }}" aria-label="Next month">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    {% else %}
+      <span class="icon-button-space" aria-hidden="true"></span>
+    {% endif %}
+  </div>
+  <p class="muted calendar-hint">
+    Forgot to tick a day? Tap it:
+    {% if habit.avoid %}clean → slipped → rest day → clean.{% else %}not done → done → rest day → not done.{% endif %}
+  </p>
+  {% set here = url_for('habits.detail', habit_id=habit.id, month=month.strftime('%Y-%m'), _anchor='calendar') %}
+  <div class="calendar">
+    <div class="calendar-row calendar-head" aria-hidden="true">
+      {% for name in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}<span>{{ name }}</span>{% endfor %}
+    </div>
+    {% for week in month_weeks %}
+      <div class="calendar-row">
+        {% for c in week %}
+          <span>
+            {% if c %}
+              {% set locked = c.state in ('future', 'before') %}
+              <form method="post" action="{{ url_for('main.checkin', habit_id=habit.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="cycle">
+                <input type="hidden" name="day" value="{{ c.day.isoformat() }}">
+                <input type="hidden" name="next" value="{{ here }}">
+                <button type="submit" class="day-cell day-{{ c.state }}{% if c.day == today %} is-today{% endif %}"
+                        aria-label="{{ c.day | short_date }}{% if c.label %}: {{ c.label }}{% endif %}{% if habit.kind == 'count' and c.value %} ({{ c.value }} {{ habit.unit }}){% endif %}"
+                        {% if locked %}disabled{% endif %}>
+                  <span class="day-number">{{ c.day.day }}</span>
+                  <span class="day-mark" aria-hidden="true"></span>
+                </button>
+              </form>
+            {% endif %}
+          </span>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

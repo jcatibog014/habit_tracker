@@ -115,8 +115,19 @@ function playOnce(element, className) {
 
 function updateCard(card, data) {
   const wasDone = card.classList.contains("is-done");
+  const kind = card.dataset.kind;
   card.classList.toggle("is-done", data.done);
+  card.classList.toggle("is-rested", data.rested);
+  card.classList.toggle("is-slipped", data.slipped);
   card.querySelector("[data-line]").textContent = data.line;
+  const nudge = card.querySelector("[data-nudge]");
+  nudge.textContent = data.nudge || "";
+  nudge.hidden = !data.nudge;
+  const streak = card.querySelector("[data-streak]");
+  streak.querySelector("[data-streak-count]").textContent = data.streak;
+  streak.hidden = data.streak === 0;
+  card.querySelector("[data-rest]").setAttribute("aria-pressed", String(data.rested));
+
   const check = card.querySelector("[data-check]");
   check.style.setProperty("--percent", data.percent);
   const count = card.querySelector("[data-count]");
@@ -124,12 +135,32 @@ function updateCard(card, data) {
     count.textContent = data.value;
     check.setAttribute("aria-label", `Add one: ${card.dataset.name}, ${data.line}`);
   } else {
-    check.setAttribute("aria-pressed", String(data.done));
+    check.setAttribute("aria-pressed", String(kind === "avoid" ? data.slipped : data.done));
   }
   const minus = card.querySelector("[data-minus]");
   if (minus) minus.disabled = data.value === 0;
-  if (data.done && !wasDone) playOnce(card, "just-done");
-  return data.done && !wasDone;
+  // A habit to avoid starts "done" (clean), so only real ticks get the pop.
+  const justDone = data.done && !wasDone && kind !== "avoid";
+  if (justDone) playOnce(card, "just-done");
+  return justDone;
+}
+
+// A streak just reached a badge: show the celebration card for a while.
+function showMilestone(milestone) {
+  const box = document.querySelector("[data-milestone]");
+  if (!box || !milestone) return;
+  box.querySelector("[data-milestone-count]").textContent = milestone.count;
+  box.querySelector("[data-milestone-text]").textContent = milestone.message;
+  box.hidden = false;
+  playOnce(box, "celebrate");
+  clearTimeout(box.hideTimer);
+  box.hideTimer = setTimeout(() => { box.hidden = true; }, 8000);
+}
+
+function setUpMilestoneClose() {
+  const box = document.querySelector("[data-milestone]");
+  if (!box) return;
+  box.querySelector("[data-milestone-close]").addEventListener("click", () => { box.hidden = true; });
 }
 
 function updateSummary(summary) {
@@ -158,7 +189,64 @@ async function sendCheckin(form, card) {
   const data = await response.json();
   const justDone = updateCard(card, data);
   updateSummary(data.summary);
-  announce(`${card.dataset.name}: ${justDone ? "done! " : ""}${data.line}. ${data.summary.message}`);
+  showMilestone(data.milestone);
+  const extra = data.milestone ? ` ${data.milestone.message}` : "";
+  announce(`${card.dataset.name}: ${justDone ? "done! " : ""}${data.line}. ${data.summary.message}${extra}`);
+}
+
+// ---------- Quote of the day ----------
+// "Another" shows the next quote from the list in the page (no reload).
+
+function setUpQuotes() {
+  const data = document.getElementById("quotes-data");
+  const button = document.querySelector("[data-next-quote]");
+  if (!data || !button) return;
+  const quotes = JSON.parse(data.textContent);
+  let index = Number(data.dataset.start) || 0;
+  const box = document.querySelector("[data-quote]");
+  button.addEventListener("click", () => {
+    index = (index + 1) % quotes.length;
+    box.querySelector("[data-quote-text]").textContent = quotes[index].quote;
+    box.querySelector("[data-quote-author]").textContent = quotes[index].author;
+    playOnce(box, "quote-change");
+  });
+}
+
+// ---------- Install on a phone ----------
+// The service worker (/sw.js) makes Gawi installable. Browsers that can
+// install it fire "beforeinstallprompt"; then the "Install app" button shows.
+
+function setUpInstall() {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").catch(() => {
+      // Not a problem: the site works the same without it.
+    });
+  }
+  const button = document.querySelector("[data-install]");
+  if (!button) return;
+  let offer = null;
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault(); // we show our own button instead of the browser's banner
+    offer = event;
+    button.hidden = false;
+  });
+  button.addEventListener("click", async () => {
+    if (!offer) return;
+    offer.prompt();
+    await offer.userChoice;
+    offer = null;
+    button.hidden = true;
+  });
+  window.addEventListener("appinstalled", () => { button.hidden = true; });
+}
+
+// ---------- The year heatmap ----------
+// On a narrow screen the year scrolls sideways; start at the newest days.
+
+function setUpScrollEnd() {
+  document.querySelectorAll("[data-scroll-end]").forEach((box) => {
+    box.scrollLeft = box.scrollWidth;
+  });
 }
 
 function setUpCheckins() {
@@ -254,5 +342,9 @@ document.addEventListener("DOMContentLoaded", () => {
   setUpFlashClose();
   setUpShowWhen();
   setUpCheckins();
+  setUpMilestoneClose();
+  setUpQuotes();
   setUpReorder();
+  setUpInstall();
+  setUpScrollEnd();
 });

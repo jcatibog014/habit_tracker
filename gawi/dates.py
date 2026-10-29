@@ -57,6 +57,12 @@ def parse_day(text):
         return None
 
 
+def add_months(first_day, count):
+    """Move the 1st of a month `count` months forward (or back, if negative)."""
+    index = first_day.year * 12 + (first_day.month - 1) + count
+    return date(index // 12, index % 12 + 1, 1)
+
+
 def short_date(value, this_year=None):
     """ "2026-10-28" -> "Wed, Oct 28". Another year gets the year too: "Mon, Dec 29, 2025"."""
     day = date.fromisoformat(value) if isinstance(value, str) else value

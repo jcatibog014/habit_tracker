@@ -3,6 +3,7 @@
 Flask builds the app inside create_app() (the "app factory" pattern).
 Tests call it with their own settings, so each test gets a fresh app and database.
 """
+import mimetypes
 import os
 from datetime import timedelta
 from pathlib import Path
@@ -10,8 +11,12 @@ from urllib.parse import quote
 
 from flask import Flask, render_template
 
+# Python doesn't know this file type, and browsers want the right one for
+# the app manifest (the name and icons used by "Add to Home Screen").
+mimetypes.add_type("application/manifest+json", ".webmanifest")
+
 from . import messages, schedule, validation
-from .dates import short_date
+from .dates import short_date, today
 
 # One emoji font for everyone, so the icons look the same (flat and colourful)
 # on Windows, Android and iPhone. "text=" asks Google Fonts for only the
@@ -35,6 +40,8 @@ CONTENT_SECURITY_POLICY = "; ".join([
     "font-src https://fonts.gstatic.com",
     "img-src 'self' data:",
     "connect-src 'self'",
+    "manifest-src 'self'",
+    "worker-src 'self'",  # the service worker, /sw.js
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -81,6 +88,8 @@ def create_app(test_config=None):
     app.jinja_env.filters["goal"] = schedule.goal
     app.jinja_env.globals["APP_NAME"] = "Gawi"
     app.jinja_env.globals["EMOJI_FONT_URL"] = EMOJI_FONT_URL
+    # The login panel's quote: the same one the Today page shows (in Philippine time).
+    app.jinja_env.globals["quote_today"] = lambda: messages.quote_of_the_day(today())
 
     @app.after_request
     def security_headers(response):

@@ -135,5 +135,10 @@ The screenshots go in `docs/screenshots/` and are taken as the **demo** user: `l
 - Reminders (browser push notifications).
 - Schedule versions, so a schedule change keeps the old history as it was.
 - A "streak freeze" token earned every 7 days.
-- Habits that should be avoided ("no soda"), and time-of-day groups (morning / evening).
-- Make it installable on a phone (PWA).
+- Time-of-day groups (morning / evening).
+- ~~Habits that should be avoided ("no soda")~~: done in the extra-features PR.
+- ~~Make it installable on a phone (PWA)~~: done in the extra-features PR.
+
+## Extra features PR (after PR #5)
+
+The owner picked these from a list: streaks + a habit page (with a calendar to fix past days), rest days, milestones, gentle nudges, habits to avoid, installing on a phone (PWA), and a motivational quote of the day. They asked for it all in one PR. This brought forward much of stages 3 and 5 (`streaks.py`, the habit page, the demo history). The week grid and the Stats page (stage 4) are still to come.

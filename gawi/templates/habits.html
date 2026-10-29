@@ -32,7 +32,7 @@
           </svg>
         </button>
         {{ habit_icon(habit) }}
-        <a class="habit-main" href="{{ url_for('habits.edit', habit_id=habit.id) }}">
+        <a class="habit-main" href="{{ url_for('habits.detail', habit_id=habit.id) }}">
           <span class="habit-name">{{ habit.name }}</span>
           <span class="habit-meta">
             {{ habit | schedule }}{% if habit | goal %} · {{ habit | goal }}{% endif %}

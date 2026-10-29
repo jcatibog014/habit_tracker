@@ -122,7 +122,10 @@ def schema_sql():
 # database from init-db already has everything, so init_db() marks them all
 # as done. Never change one that has run on the live site: add a new one at
 # the end, and change schema.sql the same way.
-MIGRATIONS = []
+MIGRATIONS = [
+    # 1: habits to avoid ("No soda").
+    ["ALTER TABLE habits ADD COLUMN avoid INTEGER NOT NULL DEFAULT 0"],
+]
 
 
 def schema_version():

@@ -19,7 +19,7 @@ START_MAX_AHEAD = timedelta(days=365)  # you can plan a habit up to a year ahead
 ICONS = [
     "✅", "💧", "🚶", "🏃", "🧘", "💪", "🚴", "🏊", "⚽",
     "📚", "✍️", "🎸", "🎨", "🧠", "💻", "🎵", "🧹", "🛏️",
-    "🙏", "😴", "🥗", "🍎", "☕", "🚭", "💊", "🦷", "🧴",
+    "🙏", "😴", "🥗", "🍎", "☕", "🚭", "💊", "🦷", "🥤",
     "🌱", "☀️", "🌙", "📵", "💰", "❤️", "🐶", "📞", "🎯",
 ]
 
@@ -31,7 +31,8 @@ COLOR_LABELS = {
     "teal": "Teal", "blue": "Sky blue", "violet": "Violet", "pink": "Pink",
 }
 
-KINDS = {"check": "Yes or no", "count": "Count"}
+# "avoid" is a yes/no habit with habits.avoid = 1 (a check-in means "I slipped").
+KINDS = {"check": "Yes or no", "count": "Count", "avoid": "Avoid it"}
 SCHEDULES = {"daily": "Every day", "weekdays": "On some days", "weekly": "Some times a week"}
 
 
@@ -75,8 +76,10 @@ def validate_habit(form, taken_names, today):
 
     kind = form.get("kind") or ""
     if kind not in KINDS:
-        errors["kind"] = "Choose yes/no or count."
-    data["kind"] = kind
+        errors["kind"] = "Choose how you track it."
+    # A habit to avoid is stored as a yes/no habit with the avoid flag.
+    data["avoid"] = 1 if kind == "avoid" else 0
+    data["kind"] = "check" if kind == "avoid" else kind
     data["target"], data["unit"] = 1, ""
     if kind == "count":
         target = _whole_number(form.get("target"), 2, TARGET_MAX)
@@ -123,6 +126,7 @@ def habit_form_values(habit):
     """A saved habit as the values its edit form shows (the opposite of validate_habit)."""
     return {
         **habit,
+        "kind": "avoid" if habit.get("avoid") else habit["kind"],
         "weekdays": (habit["weekdays"] or "").split(","),
         "target": habit["target"] if habit["kind"] == "count" else "",
         "per_week": habit["per_week"] or "",

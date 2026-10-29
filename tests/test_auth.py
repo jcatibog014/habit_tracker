@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from gawi import auth, db
+from gawi import auth, db, seed
 from gawi.dates import zone
 
 from .conftest import OWNER, OWNER_PASSWORD, add_habit, post
@@ -95,7 +95,7 @@ def test_try_the_demo(client, app):
     with app.app_context():
         demo = db.query_one("SELECT * FROM users WHERE is_demo = 1")
         assert demo["username"] == "demo"
-        assert count_habits(demo["id"]) == 6
+        assert count_habits(demo["id"]) == len(seed.DEMO_HABITS)
 
 
 def test_nobody_can_log_in_to_the_demo_with_a_password(client):
@@ -114,7 +114,7 @@ def test_demo_data_is_reset_after_an_hour(app):
         assert count_habits(demo["id"]) == 0  # not yet
 
         auth.demo_user(MOMENT + timedelta(minutes=61))
-        assert count_habits(demo["id"]) == 6
+        assert count_habits(demo["id"]) == len(seed.DEMO_HABITS)
 
 
 def test_the_demo_cannot_see_the_owners_habits(client, app, owner_id):
