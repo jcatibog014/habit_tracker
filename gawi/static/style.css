@@ -901,7 +901,8 @@ a.habit-main:hover .habit-name { text-decoration: underline; }
   }
   .no-sidebar .sidebar-top { max-width: none; margin: 0; min-height: 48px; padding: 0; }
   /* The welcome sits in the middle of the panel. */
-  .no-sidebar .welcome { flex: 1; align-content: center; gap: 16px; padding: 0 0 48px; }
+  /* The extra space below lifts the welcome a little above the middle. */
+  .no-sidebar .welcome { flex: 1; align-content: center; gap: 16px; padding: 0 0 18vh; }
   .no-sidebar .welcome h1 { font-size: 2.8rem; }
   .no-sidebar .welcome p { font-size: 1.15rem; }
   .no-sidebar .welcome-sun { width: 120px; height: 120px; }
