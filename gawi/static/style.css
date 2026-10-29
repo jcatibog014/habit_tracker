@@ -10,6 +10,7 @@
   color-scheme: light;
   --bg: #fff8f0;
   --glow: #ffe3c4;
+  --glow-2: #fff0b8;
   --card: #ffffff;
   --card-border: #f4e2cf;
   --tint: #fff3e6;                  /* a light panel inside a card */
@@ -62,6 +63,7 @@
     color-scheme: dark;
     --bg: #1a1530;
     --glow: #3a2350;
+    --glow-2: #4a2a3a;
     --card: #251e40;
     --card-border: #3a3060;
     --tint: #2e2650;
@@ -105,6 +107,7 @@
   color-scheme: dark;
   --bg: #1a1530;
   --glow: #3a2350;
+  --glow-2: #4a2a3a;
   --card: #251e40;
   --card-border: #3a3060;
   --tint: #2e2650;
@@ -150,16 +153,33 @@
 body {
   margin: 0;
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
   font-family: var(--font-body);
   font-size: 1.0625rem;
   line-height: 1.55;
   color: var(--ink);
-  /* A soft morning glow at the top of the page. */
+  background: var(--bg);
+  isolation: isolate; /* keeps the glow below behind everything, but above the background */
+}
+
+/* The breathing sunrise glow: a soft warm light at the top of the page
+   that slowly brightens and fades, like the sun coming up. It stays still
+   while you scroll, and never moves anything you can click. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -10% -10% auto -10%;
+  height: 75vh;
+  z-index: -1;
+  pointer-events: none;
   background:
-    radial-gradient(1200px 420px at 50% -120px, var(--glow), transparent 70%) no-repeat,
-    var(--bg);
+    radial-gradient(50% 60% at 55% 0%, var(--glow), transparent 70%),
+    radial-gradient(30% 45% at 85% 0%, var(--glow-2), transparent 70%);
+  transform-origin: 55% 0%;
+  animation: sunrise-glow 12s ease-in-out infinite alternate;
+}
+@keyframes sunrise-glow {
+  from { opacity: 0.5; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1.06); }
 }
 
 h1, h2, h3 {
@@ -170,6 +190,9 @@ h1, h2, h3 {
 }
 h1 { font-size: 2rem; }
 h2 { font-size: 1.35rem; }
+
+/* No lonely last word (or emoji) on its own line. */
+h1, h2, h3, p { text-wrap: pretty; }
 
 a { color: inherit; text-underline-offset: 3px; }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -203,20 +226,80 @@ p { margin: 0 0 12px; }
 }
 .skip-link:focus { top: 8px; }
 
-/* ---------- Header, nav, footer ---------- */
+/* ---------- Layout: a sidebar on computers, a top bar with a ☰ menu on phones ----------
+   One left edge for everything in the sidebar: the logo, the menu icons,
+   the username and the buttons all start at the same place. On computers
+   the page starts at the same height as the logo. */
 
-.site-header {
+.shell { display: flex; flex-direction: column; min-height: 100vh; }
+.content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+.sidebar {
+  position: relative;
+  z-index: 10;
   background: var(--header-bg);
   color: var(--header-ink);
   box-shadow: 0 2px 12px rgb(120 60 20 / 0.12);
 }
-.header-inner { max-width: 960px; margin: 0 auto; padding: 0 16px; }
-.header-top {
+.sidebar-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 0 6px;
+  min-height: 64px;
+  padding: 10px 16px;
+}
+/* Logged out: the logo and the theme button line up with the edges of the login cards. */
+.no-sidebar .sidebar-top { max-width: calc(480px + 32px); margin: 0 auto; }
+
+/* The ☰ menu (phones): folded away until the button opens it.
+   Without JavaScript it simply stays open. */
+.sidebar-panel { display: grid; gap: 12px; padding: 0 16px 16px; }
+.js .sidebar-panel { display: none; }
+.js .sidebar.is-open .sidebar-panel { display: grid; animation: slide-in 0.2s ease-out; }
+.menu-button .icon-close { display: none; }
+.sidebar.is-open .menu-button .icon-open { display: none; }
+.sidebar.is-open .menu-button .icon-close { display: block; }
+
+.sidebar-footer {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--header-border);
+}
+.sidebar-user { font-weight: 800; color: var(--header-soft); overflow-wrap: anywhere; }
+.sidebar-actions { display: flex; align-items: center; gap: 8px; }
+.sidebar-actions form { margin: 0; }
+
+@media (min-width: 768px) {
+  .has-sidebar .shell { flex-direction: row; }
+  .has-sidebar .sidebar {
+    position: sticky;
+    top: 0;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    width: 240px;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 24px 16px;
+    box-shadow: 2px 0 16px rgb(120 60 20 / 0.12);
+  }
+  .has-sidebar .sidebar-top { min-height: 48px; padding: 0; }
+  .has-sidebar .menu-button { display: none; }
+  .has-sidebar .sidebar-panel,
+  .js .has-sidebar .sidebar-panel {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 24px;
+    padding: 0;
+    animation: none;
+  }
+  .has-sidebar .sidebar-footer { margin-top: auto; }
+  .has-sidebar .page { padding: 24px 32px 40px; }
 }
 
 .brand {
@@ -230,10 +313,6 @@ p { margin: 0 0 12px; }
   color: var(--header-ink);
 }
 .logo { display: block; flex: none; }
-
-.header-actions { display: flex; align-items: center; gap: 8px; }
-.header-actions form { margin: 0; }
-.header-user { color: var(--header-soft); font-weight: 700; }
 
 .icon-button {
   display: inline-grid;
@@ -251,13 +330,13 @@ p { margin: 0 0 12px; }
 .icon-button:hover:not(:disabled) { background: var(--hover); }
 .icon-button:active:not(:disabled) { transform: scale(0.92); }
 .icon-button:disabled { opacity: 0.35; cursor: default; }
-.site-header .icon-button,
-.site-header .button-on-bar {
+.sidebar .icon-button,
+.sidebar .button-on-bar {
   background: transparent;
   border: 1px solid var(--header-border);
   color: var(--header-ink);
 }
-.site-header .icon-button:hover, .site-header .button-on-bar:hover { background: var(--tab-active); filter: none; }
+.sidebar .icon-button:hover, .sidebar .button-on-bar:hover { background: var(--tab-active); filter: none; }
 
 /* Moon in light mode, sun in dark mode. */
 .theme-icon { display: block; }
@@ -269,14 +348,16 @@ p { margin: 0 0 12px; }
   :root:not([data-theme="light"]) .icon-moon { display: none; }
 }
 
-.site-nav { display: flex; gap: 6px; padding: 4px 0 10px; }
+/* Menu items: full-width rows. Their side padding (12px) is taken back with
+   a negative margin, so each icon lines up with the logo above it. */
+.site-nav { display: grid; gap: 4px; margin: 0 -12px; }
 .site-nav a {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  min-height: 44px;
-  padding: 0 16px;
-  border-radius: 999px;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: var(--radius-small);
   text-decoration: none;
   font-weight: 700;
   color: var(--header-soft);
@@ -285,9 +366,8 @@ p { margin: 0 0 12px; }
 .site-nav a:hover { background: var(--tab-active); color: var(--header-ink); }
 .site-nav a[aria-current="page"] { background: var(--tab-active); color: var(--header-ink); }
 .nav-icon { flex: none; }
-.site-nav .nav-add { display: none; } /* phones only (see the phone section) */
 
-/* "Demo": a small badge in the header instead of a big banner.
+/* "Demo": a small badge instead of a big banner.
    Hover it (or focus it with the keyboard) for the tip. */
 .demo-badge {
   position: relative;
@@ -307,8 +387,8 @@ p { margin: 0 0 12px; }
 .demo-badge:hover::after, .demo-badge:focus-visible::after {
   content: attr(data-tip);
   position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
+  bottom: calc(100% + 8px);
+  left: 0;
   z-index: 30;
   width: max-content;
   max-width: 220px;
@@ -329,7 +409,7 @@ html:not(.js) .js-only { display: none !important; }
 .page {
   flex: 1;
   width: 100%;
-  max-width: 960px;
+  max-width: 760px;
   margin: 0 auto;
   padding: 24px 16px 40px;
 }
@@ -340,6 +420,8 @@ html:not(.js) .js-only { display: none !important; }
 /* ---------- Page parts ---------- */
 
 .page-title {
+  /* As tall as the logo row in the sidebar, so the page title and the logo line up. */
+  min-height: 48px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -487,7 +569,6 @@ input:not([type="radio"], [type="checkbox"]), select {
 input[aria-invalid="true"], [aria-invalid="true"] > .icon-choice { border-color: var(--danger); }
 
 .form-buttons { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 4px; }
-.habit-form { max-width: 640px; }
 
 /* The radio buttons of the pickers are hidden; the whole tile is the button.
    :has() lets the tile show when its radio is ticked or has keyboard focus. */
@@ -505,7 +586,7 @@ input[aria-invalid="true"], [aria-invalid="true"] > .icon-choice { border-color:
 
 .icon-grid {
   display: grid;
-  grid-template-columns: repeat(9, 1fr);
+  grid-template-columns: repeat(9, minmax(0, 52px)); /* always 4 full rows of 9 */
   gap: 8px;
 }
 .icon-choice {
@@ -749,11 +830,10 @@ a.habit-main:hover .habit-name { text-decoration: underline; }
 .rest .today-card { box-shadow: none; }
 .rest-note { font-weight: 700; }
 
-/* ---------- The round "+" button ---------- */
+/* ---------- The "New habit" button ---------- */
 
-/* On computers: a big round-ended button under the list. It never floats
-   over the habits, so it can't cover a check button. On phones it hides,
-   and the raised "+" in the tab bar takes its place (see .nav-add). */
+/* A big round-ended button under the list, at its right edge. It never
+   floats over the habits, so it can't cover a check button. */
 .fab {
   display: flex;
   width: max-content;
@@ -799,7 +879,6 @@ a.habit-main:hover .habit-name { text-decoration: underline; }
 }
 .chip:hover { transform: translateY(-2px); }
 
-.danger-zone { max-width: 640px; }
 .danger-actions { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px 16px; }
 .danger-actions form { margin: 0; }
 .danger-actions p { margin: 0; }
@@ -823,71 +902,20 @@ a.habit-main:hover .habit-name { text-decoration: underline; }
 }
 .login-card .form { margin-top: 8px; }
 
-.settings-card { max-width: 640px; }
+/* Every card is the full width of the page, so their edges line up; the form inside stays a comfortable width. */
+.settings-card .form { max-width: 520px; }
 
 /* ---------- Phones ---------- */
 
 @media (max-width: 520px) {
   h1 { font-size: 1.7rem; }
-  .header-user { display: none; }
-  .brand { font-size: 1.6rem; }
-
-  /* The tabs move to a bar at the bottom of the screen, near your thumb. */
-  .site-nav {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 10;
-    justify-content: space-around;
-    gap: 0;
-    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
-    background: var(--card);
-    border-top: 1px solid var(--card-border);
-    box-shadow: 0 -4px 16px rgb(0 0 0 / 0.08);
-  }
-  .site-nav a {
-    flex: 1;
-    flex-direction: column;
-    justify-content: center;
-    gap: 2px;
-    min-height: 52px;
-    padding: 4px;
-    border-radius: var(--radius-small);
-    color: var(--ink-soft);
-    font-size: 0.8rem;
-  }
-  .site-nav a:hover { background: var(--hover); color: var(--ink); }
-  .site-nav a[aria-current="page"] { background: var(--primary-soft); color: var(--ink); }
-  .site-nav a[aria-current="page"] .nav-icon { color: var(--primary); }
-  body:has(.site-nav) { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
-
   .habit-row, .today-card { gap: 10px; padding: 10px 12px; }
   .today-hero { padding: 16px; }
-  .progress-ring { --size: 88px; }
-  .ring-count { font-size: 1.35rem; }
-
-  /* The "+" lives in the tab bar on phones. */
-  .fab { display: none; }
-  .site-nav .nav-add {
-    display: grid;
-    place-items: center;
-    flex: none;
-    width: 60px;
-    height: 60px;
-    min-height: 0;
-    margin: -24px 6px 0;
-    padding: 0;
-    border-radius: 50%;
-    background: var(--primary);
-    color: var(--on-primary);
-    border: 4px solid var(--card);
-    box-shadow: 0 6px 16px rgb(194 65 12 / 0.35);
-    transition: transform 0.15s ease;
-  }
-  .site-nav .nav-add:hover { background: var(--primary); color: var(--on-primary); filter: brightness(1.08); }
-  .site-nav .nav-add:active { transform: scale(0.92); }
-  .today-hero h1 { font-size: 1.45rem; }
+  .progress-ring { --size: 80px; }
+  .ring-count { font-size: 1.3rem; }
+  .today-hero { gap: 12px; }
+  .today-hero h1 { font-size: 1.3rem; }
+  .today-message { font-size: 0.95rem; }
 
   .icon-grid { grid-template-columns: repeat(6, 1fr); }
   .choice-cards, .choice-cards.three, .sub-fields { grid-template-columns: 1fr; }
