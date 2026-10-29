@@ -1,4 +1,4 @@
-﻿# AGENTS.md
+# AGENTS.md
 
 This file guides AI coding agents (Claude Code, Codex, Cursor, Copilot and others) working in this repository.
 
