@@ -21,7 +21,7 @@
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
 </head>
 {# Logged in: the menu is a sidebar on the left (a ☰ menu on phones).
-   Logged out: just a slim bar with the logo. #}
+   Logged out: the same sunrise panel holds a welcome, and the page sits beside it (above it on phones). #}
 <body class="{{ 'has-sidebar' if g.user else 'no-sidebar' }}">
   <a class="skip-link" href="#main">Skip to the content</a>
 
@@ -91,6 +91,13 @@
               </form>
             </div>
           </div>
+        </div>
+      {% else %}
+        {# Logged out: the panel holds a big welcome instead of the menu. #}
+        <div class="welcome">
+          {% with logo_size=120, logo_class="welcome-sun" %}{% include "_logo.html" %}{% endwith %}
+          <h1>Magandang araw!</h1>
+          <p>Start your habit journey here. Tick off small steps, keep your streak alive, and watch your progress glow.</p>
         </div>
       {% endif %}
     </header>

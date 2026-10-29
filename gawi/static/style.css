@@ -204,6 +204,7 @@ p { margin: 0 0 12px; }
 }
 
 .muted { color: var(--ink-soft); font-weight: 400; }
+.nowrap { white-space: nowrap; }
 
 .visually-hidden {
   position: absolute;
@@ -249,8 +250,6 @@ p { margin: 0 0 12px; }
   min-height: 64px;
   padding: 10px 16px;
 }
-/* Logged out: the logo and the theme button line up with the edges of the login cards. */
-.no-sidebar .sidebar-top { max-width: calc(480px + 32px); margin: 0 auto; }
 
 /* The ☰ menu (phones): folded away until the button opens it.
    Without JavaScript it simply stays open. */
@@ -515,11 +514,24 @@ details[open] > summary::before { transform: rotate(45deg); }
 }
 .button-danger:hover { background: var(--danger-bg); filter: none; }
 .button.small { padding: 0 14px; }
+/* A see-through button with an outline, like "Log out". */
+.button-outline {
+  background: transparent;
+  color: var(--ink);
+  border: 2px solid var(--control-border);
+  box-shadow: none;
+}
+.button-outline:hover { background: var(--hover); filter: none; }
+/* The big main button: the same size and glow as "New habit". */
+.button-large { min-height: 56px; padding: 0 28px; font-size: 1.05rem; }
+.button-large:not(.button-outline) { box-shadow: 0 6px 20px rgb(194 65 12 / 0.35), 0 2px 4px rgb(0 0 0 / 0.12); }
+.button-block { width: 100%; }
 
 /* ---------- Forms ---------- */
 
 .form { display: grid; gap: 16px; }
 .form-row { grid-template-columns: 1fr auto; align-items: end; }
+.form-row .button { min-height: 48px; } /* as tall as the box next to it */
 .field { display: grid; gap: 6px; margin: 0; }
 .field > span:first-child, legend { font-weight: 800; }
 fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
@@ -527,12 +539,13 @@ legend { padding: 0; margin-bottom: 8px; }
 .field-hint { color: var(--ink-soft); font-size: 0.95rem; }
 .field-error { color: var(--danger); font-weight: 700; font-size: 0.95rem; }
 
+/* Soft, roomy boxes: a 2px border and round corners, like the cards. */
 input:not([type="radio"], [type="checkbox"]), select {
   width: 100%;
-  min-height: 44px;
-  padding: 0 12px;
-  border: 1px solid var(--control-border);
-  border-radius: var(--radius-small);
+  min-height: 48px;
+  padding: 0 14px;
+  border: 2px solid var(--control-border);
+  border-radius: 14px;
   background: var(--control-bg);
 }
 input[aria-invalid="true"], [aria-invalid="true"] > .icon-choice { border-color: var(--danger); }
@@ -854,22 +867,67 @@ a.habit-main:hover .habit-name { text-decoration: underline; }
 
 /* ---------- Login ---------- */
 
-.login-layout { display: grid; gap: 16px; max-width: 480px; margin: 0 auto; }
-.login-layout .card { margin: 0; }
-.hero-card {
-  padding: 28px 24px;
-  border-radius: 24px;
-  background: var(--hero-bg);
-  box-shadow: var(--shadow);
-  text-align: center;
+/* Logged out, the page is split like the app: the sunrise panel on the
+   left (where the sidebar is) with the welcome, and the login card
+   centred on the cream side. On phones the panel sits on top. */
+.welcome {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  padding: 8px 16px 28px;
 }
-.hero-card p:last-child { margin: 0; }
-.hero-sun { font-size: 3rem; margin: 0; animation: rise 3s ease-in-out infinite; }
+.welcome h1 { margin: 0; font-size: 2rem; color: var(--header-ink); }
+.welcome p { margin: 0; max-width: 34ch; color: var(--header-soft); font-weight: 700; }
+.welcome-sun { display: block; width: 72px; height: 72px; animation: rise 3s ease-in-out infinite; }
 @keyframes rise {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
 }
-.login-card .form { margin-top: 8px; }
+
+@media (min-width: 768px) {
+  .no-sidebar .shell { flex-direction: row; }
+  .no-sidebar .sidebar {
+    position: sticky;
+    top: 0;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    width: clamp(360px, 42vw, 600px);
+    height: 100vh;
+    padding: 24px 40px;
+    box-shadow: 2px 0 16px rgb(120 60 20 / 0.12);
+  }
+  .no-sidebar .sidebar-top { max-width: none; margin: 0; min-height: 48px; padding: 0; }
+  /* The welcome sits in the middle of the panel. */
+  .no-sidebar .welcome { flex: 1; align-content: center; gap: 16px; padding: 0 0 48px; }
+  .no-sidebar .welcome h1 { font-size: 2.8rem; }
+  .no-sidebar .welcome p { font-size: 1.15rem; }
+  .no-sidebar .welcome-sun { width: 120px; height: 120px; }
+}
+
+/* The login card, centred on the cream side. */
+.no-sidebar .page {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 440px;
+}
+.login-card { margin: 0; padding: 28px; }
+.login-card h2 { margin-bottom: 4px; font-size: 1.6rem; }
+.login-card .form { margin-top: 20px; }
+
+/* "or", with a line on each side. */
+.or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+.or::before, .or::after { content: ""; flex: 1; border-top: 1px solid var(--card-border); }
+.login-card .demo-form { margin: 0; }
+.demo-note { margin: 10px 0 0; text-align: center; font-size: 0.95rem; }
 
 /* Every card is the full width of the page, so their edges line up; the form inside stays a comfortable width. */
 .settings-card .form { max-width: 520px; }

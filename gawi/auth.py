@@ -200,7 +200,7 @@ def demo():
 @bp.post("/logout")
 def logout():
     session.clear()
-    flash("You are logged out. See you tomorrow! ☀️")
+    flash("You are logged out. See you tomorrow!")
     return redirect(url_for("auth.login"))
 
 
