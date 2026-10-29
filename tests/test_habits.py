@@ -12,10 +12,6 @@ def habit_names(app, user_id):
         return [row["name"] for row in rows]
 
 
-def test_home_goes_to_the_habit_list_for_now(owner_client):
-    assert owner_client.get("/").headers["Location"] == "/habits"
-
-
 def test_empty_list_shows_ideas(owner_client):
     page = owner_client.get("/habits").get_data(as_text=True)
     assert "Start with one small habit" in page
@@ -106,18 +102,28 @@ def test_delete_removes_the_habit_and_its_check_ins(owner_client, app, owner_id)
         assert db.query("SELECT * FROM checkins WHERE habit_id = ?", (habit_id,)) == []
 
 
-def test_move_up_and_down(owner_client, app, owner_id):
-    first = add_habit(app, owner_id, "A", position=0)
-    add_habit(app, owner_id, "B", position=1)
-    third = add_habit(app, owner_id, "C", position=2)
+def test_the_list_has_drag_handles_and_pencils(owner_client, app, owner_id):
+    add_habit(app, owner_id, "Read")
+    page = owner_client.get("/habits").get_data(as_text=True)
+    assert "data-handle" in page and 'aria-label="Edit Read"' in page and 'class="fab"' in page
 
-    post(owner_client, f"/habits/{third}/move", {"direction": "up"})
-    assert habit_names(app, owner_id) == ["A", "C", "B"]
-    post(owner_client, f"/habits/{first}/move", {"direction": "down"})
+
+def test_reorder_by_dragging(owner_client, app, owner_id):
+    a = add_habit(app, owner_id, "A", position=0)
+    b = add_habit(app, owner_id, "B", position=1)
+    c = add_habit(app, owner_id, "C", position=2)
+    response = post(owner_client, "/habits/reorder", {"order": f"{c},{a},{b}"})
+    assert response.get_json() == {"ok": True}
     assert habit_names(app, owner_id) == ["C", "A", "B"]
-    # Already at the top: nothing changes.
-    post(owner_client, f"/habits/{third}/move", {"direction": "up"})
-    assert habit_names(app, owner_id) == ["C", "A", "B"]
+
+
+def test_reorder_must_name_exactly_your_habits(owner_client, app, owner_id, other_id):
+    a = add_habit(app, owner_id, "A", position=0)
+    b = add_habit(app, owner_id, "B", position=1)
+    pedro = add_habit(app, other_id, "Pedro's")
+    for bad in (f"{a}", f"{a},{b},{pedro}", f"{b},{pedro}", "x,y", ""):
+        assert post(owner_client, "/habits/reorder", {"order": bad}).status_code == 400
+    assert habit_names(app, owner_id) == ["A", "B"]
 
 
 def test_nobody_can_touch_another_users_habit(owner_client, app, other_id):
@@ -125,6 +131,5 @@ def test_nobody_can_touch_another_users_habit(owner_client, app, other_id):
     assert owner_client.get(f"/habits/{habit_id}/edit").status_code == 404
     assert post(owner_client, f"/habits/{habit_id}/edit", HABIT_FORM).status_code == 404
     assert post(owner_client, f"/habits/{habit_id}/archive").status_code == 404
-    assert post(owner_client, f"/habits/{habit_id}/move", {"direction": "up"}).status_code == 404
     assert post(owner_client, f"/habits/{habit_id}/delete").status_code == 404
     assert get_habit(app, habit_id)["name"] == "Pedro's secret"

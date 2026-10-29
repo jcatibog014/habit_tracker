@@ -6,11 +6,21 @@ Tests call it with their own settings, so each test gets a fresh app and databas
 import os
 from datetime import timedelta
 from pathlib import Path
+from urllib.parse import quote
 
 from flask import Flask, render_template
 
-from . import schedule
+from . import messages, schedule, validation
 from .dates import short_date
+
+# One emoji font for everyone, so the icons look the same (flat and colourful)
+# on Windows, Android and iPhone. "text=" asks Google Fonts for only the
+# emoji we use: a few KB instead of the whole 10 MB font.
+APP_EMOJI = validation.ICONS + messages.EMOJI
+EMOJI_FONT_URL = (
+    "https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap&text="
+    + quote("".join(sorted(set(APP_EMOJI))))
+)
 
 DEV_SECRET_KEY = "dev-only-not-secret"
 
@@ -70,6 +80,7 @@ def create_app(test_config=None):
     app.jinja_env.filters["schedule"] = schedule.describe
     app.jinja_env.filters["goal"] = schedule.goal
     app.jinja_env.globals["APP_NAME"] = "Gawi"
+    app.jinja_env.globals["EMOJI_FONT_URL"] = EMOJI_FONT_URL
 
     @app.after_request
     def security_headers(response):

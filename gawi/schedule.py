@@ -6,6 +6,7 @@ A habit's schedule is one of:
               (Monday is 1 and Sunday is 7, like date.isoweekday()).
 - 'weekly':   any `per_week` days a week (the week starts on Monday).
 """
+from datetime import date, timedelta
 
 WEEKDAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]  # index 0 is isoweekday 1
 
@@ -13,6 +14,24 @@ WEEKDAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]  # index 0 is 
 def weekday_numbers(text):
     """ "1,3,5" -> [1, 3, 5]."""
     return [int(part) for part in (text or "").split(",") if part.strip()]
+
+
+def week_start(day):
+    """The Monday of the week `day` is in. (weekday() is 0 on Monday.)"""
+    return day - timedelta(days=day.weekday())
+
+
+def is_due(habit, day):
+    """Can this habit be done on this day, by its schedule?
+
+    A 'weekly' habit can be done on any day; how many days are still
+    needed this week is worked out elsewhere (daily.build_day).
+    """
+    if day < date.fromisoformat(habit["start_date"]):
+        return False  # it hasn't started yet
+    if habit["schedule"] == "weekdays":
+        return day.isoweekday() in weekday_numbers(habit["weekdays"])
+    return True
 
 
 def describe(habit):

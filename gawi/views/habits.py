@@ -1,5 +1,5 @@
-"""The Habits tab: the list, add, edit, archive, delete and reorder."""
-from flask import Blueprint, flash, g, redirect, render_template, request, url_for
+"""The Habits tab: the list, add, edit, archive, delete and reorder (by dragging)."""
+from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
 from .. import db
 from ..auth import login_required
@@ -152,22 +152,24 @@ def delete(habit_id):
     return redirect(url_for("habits.index"))
 
 
-@bp.post("/<int:habit_id>/move")
+@bp.post("/reorder")
 @login_required
-def move(habit_id):
-    """Move a habit one place up or down the list."""
-    owned_habit(habit_id)
-    habits = active_habits()
-    ids = [habit["id"] for habit in habits]
-    if habit_id in ids:
-        index = ids.index(habit_id)
-        other = index - 1 if request.form.get("direction") == "up" else index + 1
-        if 0 <= other < len(ids):
-            ids[index], ids[other] = ids[other], ids[index]
-            # Number them 0, 1, 2... again, so there are never two at the same place.
-            db.execute_many(
-                "UPDATE habits SET position = ? WHERE id = ?",
-                [(position, row_id) for position, row_id in enumerate(ids)],
-            )
-            db.commit()
-    return redirect(url_for("habits.index", _anchor=f"habit-{habit_id}"))
+def reorder():
+    """Save a new order after dragging: order="3,1,2" (habit ids, top first).
+
+    It must name exactly the user's active habits, so nobody can move
+    someone else's habit, or lose one by leaving it out.
+    """
+    try:
+        ids = [int(part) for part in request.form.get("order", "").split(",")]
+    except ValueError:
+        abort(400, "That order is not a list of habits.")
+    if sorted(ids) != sorted(habit["id"] for habit in active_habits()):
+        abort(400, "That order doesn't match your habits. Reload the page and try again.")
+    # Number them 0, 1, 2... so there are never two at the same place.
+    db.execute_many(
+        "UPDATE habits SET position = ? WHERE id = ? AND user_id = ?",
+        [(position, habit_id, g.user["id"]) for position, habit_id in enumerate(ids)],
+    )
+    db.commit()
+    return {"ok": True}

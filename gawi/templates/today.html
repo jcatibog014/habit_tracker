@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from "_macros.html" import habit_icon, fab, empty_ideas %}
+{% block title %}Today · {{ APP_NAME }}{% endblock %}
+
+{# One habit for today. The big round button on the right is the main action:
+   one tap ticks it (or, for a count, adds one). The forms work without
+   JavaScript; app.js sends them with fetch() so the page doesn't reload. #}
+{% macro today_card(card) -%}
+  {% set habit = card.habit %}
+  {% set is_count = habit.kind == 'count' %}
+  <li class="today-card{% if card.done %} is-done{% endif %}" id="habit-{{ habit.id }}"
+      style="--habit: var(--habit-{{ habit.color }})" data-habit data-name="{{ habit.name }}" data-kind="{{ habit.kind }}">
+    {{ habit_icon(habit) }}
+    <div class="today-main">
+      <span class="habit-name">{{ habit.name }}</span>
+      <span class="habit-meta" data-line>
+        {% if card.week_reached %}Week goal reached <span class="emoji" aria-hidden="true">🎉</span>{% else %}{{ card.line }}{% endif %}
+      </span>
+    </div>
+    <div class="today-actions">
+      {% if is_count %}
+        <form method="post" action="{{ url_for('main.checkin', habit_id=habit.id) }}" data-checkin>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="minus">
+          <button type="submit" class="icon-button minus-button" aria-label="One less: {{ habit.name }}" data-minus
+                  {% if card.value == 0 %}disabled{% endif %}>
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path d="M6 12h12" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </form>
+      {% endif %}
+      <form method="post" action="{{ url_for('main.checkin', habit_id=habit.id) }}" data-checkin>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="{{ 'plus' if is_count else 'toggle' }}">
+        <button type="submit" class="check-button" style="--percent: {{ card.percent }}" data-check
+                {% if is_count %}aria-label="Add one: {{ habit.name }}, {{ card.line }}"
+                {% else %}aria-label="Done: {{ habit.name }}" aria-pressed="{{ 'true' if card.done else 'false' }}"{% endif %}>
+          <svg class="check-mark" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+            <path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          {% if is_count %}<span class="check-count" aria-hidden="true" data-count>{{ card.value }}</span>{% endif %}
+        </button>
+      </form>
+    </div>
+  </li>
+{%- endmacro %}
+
+{% block content %}
+{% if not day.due and not day.rest %}
+  <div class="page-title">
+    <h1>{{ greeting }}! <span class="emoji" aria-hidden="true">{{ greeting_emoji }}</span></h1>
+  </div>
+  {{ empty_ideas(suggestions) }}
+{% else %}
+  <section class="today-hero{% if summary.total and summary.done == summary.total %} is-perfect{% endif %}" data-hero aria-labelledby="today-title">
+    <div class="today-text">
+      <p class="today-date">{{ date_label }}</p>
+      <h1 id="today-title">{{ greeting }}! <span class="emoji" aria-hidden="true">{{ greeting_emoji }}</span></h1>
+      <p class="today-message" data-message>{{ summary.message }}</p>
+    </div>
+    <div class="progress-ring" style="--percent: {{ summary.percent }}" data-ring
+         role="img" aria-label="{{ summary.done }} of {{ summary.total }} done today">
+      <span class="ring-count"><strong data-done>{{ summary.done }}</strong>/<span data-total>{{ summary.total }}</span></span>
+      <span class="ring-label">done</span>
+    </div>
+  </section>
+
+  {% if day.due %}
+    <ol class="today-list" aria-label="For today">
+      {% for card in day.due %}{{ today_card(card) }}{% endfor %}
+    </ol>
+  {% else %}
+    <p class="card rest-note">Nothing on your list for today. Rest well! <span class="emoji" aria-hidden="true">🌿</span></p>
+  {% endif %}
+
+  {% if day.rest %}
+    <details class="rest">
+      <summary>Not for today ({{ day.rest | length }})</summary>
+      <p class="muted">Their day off, or their week goal is reached. You can still tick one for extra.</p>
+      <ol class="today-list">
+        {% for card in day.rest %}{{ today_card(card) }}{% endfor %}
+      </ol>
+    </details>
+  {% endif %}
+{% endif %}
+
+{# Screen readers hear what changed after a tap. #}
+<p class="visually-hidden" aria-live="polite" id="live"></p>
+{% endblock %}
+
+{% block fab %}{{ fab() }}{% endblock %}

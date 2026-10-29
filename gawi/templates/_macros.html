@@ -26,6 +26,36 @@
   </label>
 {%- endmacro %}
 
+{# The floating "+" button: round on phones (near your thumb), with words on bigger screens. #}
+{% macro fab() -%}
+  <a class="fab" href="{{ url_for('habits.new') }}" aria-label="New habit">
+    <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+    </svg>
+    <span class="fab-label" aria-hidden="true">New habit</span>
+  </a>
+{%- endmacro %}
+
+{# The first-visit card: one-tap ideas for a first habit. #}
+{% macro empty_ideas(suggestions) -%}
+  <section class="card empty-state" aria-labelledby="empty-title">
+    <p class="empty-emoji" aria-hidden="true">🌱</p>
+    <h2 id="empty-title">Start with one small habit</h2>
+    <p>Pick something easy you'd like to do every day. Small steps add up!</p>
+    <ul class="suggestions" aria-label="Ideas">
+      {% for name, (icon, color, kind, target, unit) in suggestions.items() %}
+        <li>
+          <a class="chip" style="--habit: var(--habit-{{ color }})"
+             href="{{ url_for('habits.new', suggestion=name) }}">
+            <span class="emoji" aria-hidden="true">{{ icon }}</span> {{ name }}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+    <a class="button" href="{{ url_for('habits.new') }}">Make your own</a>
+  </section>
+{%- endmacro %}
+
 {# A habit's round icon, in its own colour. #}
 {% macro habit_icon(habit, size="") -%}
   <span class="habit-icon {{ size }}" style="--habit: var(--habit-{{ habit.color }})" aria-hidden="true">{{ habit.icon }}</span>

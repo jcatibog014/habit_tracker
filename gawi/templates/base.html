@@ -12,6 +12,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;600;700;800&display=swap">
+  {# Only the emoji we use, so they look the same on every device (see create_app). #}
+  <link rel="stylesheet" href="{{ EMOJI_FONT_URL }}">
   {# No defer: it must run before the page is drawn (see theme-init.js). #}
   <script src="{{ url_for('static', filename='theme-init.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -23,6 +25,7 @@
 
   {# Tabs: (label, endpoint, the blueprint that counts as "this tab", icon). #}
   {% set tabs = [
+       ('Today', 'main.home', 'main', 'sun'),
        ('Habits', 'habits.index', 'habits', 'list'),
        ('Settings', 'auth.settings', 'settings', 'sliders')] %}
   {% set section = 'settings' if request.endpoint == 'auth.settings' else (request.endpoint or '').split('.')[0] %}
@@ -48,7 +51,14 @@
             </svg>
           </button>
           {% if g.user %}
-            <span class="header-user">{{ g.user.username }}</span>
+            {% if g.user.is_demo %}
+              {# A small badge instead of a big banner. The tip shows on hover and keyboard focus. #}
+              <span class="demo-badge" tabindex="0" data-tip="Made-up habits. They start fresh every hour.">
+                Demo<span class="visually-hidden">: made-up habits that start fresh every hour</span>
+              </span>
+            {% else %}
+              <span class="header-user">{{ g.user.username }}</span>
+            {% endif %}
             <form method="post" action="{{ url_for('auth.logout') }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="button button-on-bar">Log out</button>
@@ -60,9 +70,21 @@
         {# On phones this becomes a bar fixed to the bottom of the screen, near your thumb. #}
         <nav class="site-nav" aria-label="Main">
           {% for label, endpoint, tab_section, icon in tabs %}
+            {% if loop.index0 == (tabs | length + 1) // 2 %}
+              {# Phones only: a raised round "+" in the tab bar, right under the thumb.
+                 (A floating one would cover the check buttons on the right of each habit.) #}
+              <a class="nav-add" href="{{ url_for('habits.new') }}" aria-label="New habit">
+                <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+                </svg>
+              </a>
+            {% endif %}
             <a href="{{ url_for(endpoint) }}" {% if section == tab_section %}aria-current="page"{% endif %}>
               <svg class="nav-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                {% if icon == 'list' %}
+                {% if icon == 'sun' %}
+                  <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+                  <path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                {% elif icon == 'list' %}
                   <path d="M9 6h11M9 12h11M9 18h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                   <path d="m3.5 6 1.2 1.2L7 4.8M3.5 12l1.2 1.2L7 10.8M3.5 18l1.2 1.2L7 16.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                 {% elif icon == 'sliders' %}
@@ -79,15 +101,21 @@
     </div>
   </header>
 
-  {% if g.user and g.user.is_demo %}
-    <p class="demo-banner">You are using the <strong>demo</strong>. These habits are made up, and they start fresh every hour.</p>
-  {% endif %}
-
   <main id="main" class="page">
     {% for message in get_flashed_messages() %}
-      <p class="flash" role="status">{{ message }}</p>
+      <div class="flash" role="status">
+        <p>{{ message }}</p>
+        <button type="button" class="flash-close js-only" aria-label="Close this message" data-close-flash>
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
     {% endfor %}
     {% block content %}{% endblock %}
+    {# The "New habit" button under the list, on pages where adding one makes
+       sense. Phones use the "+" in the tab bar instead. #}
+    {% block fab %}{% endblock %}
   </main>
 
   <footer class="site-footer">
