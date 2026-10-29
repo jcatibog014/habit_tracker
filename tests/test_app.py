@@ -38,6 +38,16 @@ def test_every_page_has_the_logo_and_tabs(owner_client):
     assert 'class="logo"' in page and 'aria-current="page"' in page and "Settings" in page
 
 
+def test_logged_in_pages_have_the_sidebar_menu(owner_client):
+    page = owner_client.get("/").get_data(as_text=True)
+    assert 'class="has-sidebar"' in page and "data-menu-button" in page and 'aria-label="Main"' in page
+
+
+def test_the_login_page_has_no_menu(app):
+    page = app.test_client().get("/login").get_data(as_text=True)
+    assert 'class="no-sidebar"' in page and "data-menu-button" not in page and 'aria-label="Main"' not in page
+
+
 def test_the_emoji_font_has_every_icon(client):
     from urllib.parse import unquote
 
