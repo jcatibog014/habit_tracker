@@ -46,10 +46,11 @@
 
   <fieldset class="field">
     <legend>How do you track it?</legend>
-    <div class="choice-cards">
+    <div class="choice-cards three">
       {% for kind, label, text in [
            ('check', 'Yes or no', 'Did I do it today? One tap.'),
-           ('count', 'Count', 'Reach a number, like 8 glasses of water.')] %}
+           ('count', 'Count', 'Reach a number, like 8 glasses of water.'),
+           ('avoid', 'Avoid it', 'Something to stop, like soda. Tap only if you slip.')] %}
         <label class="choice-card">
           <input type="radio" name="kind" value="{{ kind }}" {% if values.kind == kind %}checked{% endif %}>
           <span class="choice-title">{{ label }}</span>

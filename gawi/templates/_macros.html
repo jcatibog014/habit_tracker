@@ -56,6 +56,16 @@
   </section>
 {%- endmacro %}
 
+{# The streak: a small flame and the number. Hidden while the streak is 0. #}
+{% macro flame(count, unit) -%}
+  <span class="streak" data-streak {% if not count %}hidden{% endif %}>
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+      <path d="M12 2.5c.8 3.2 4.8 5.3 4.8 10.2a4.8 4.8 0 0 1-9.6 0c0-2.3 1.1-3.9 2.3-5 .2 1.6 1 2.7 2.3 2.9-.8-3 .2-5.6.2-8.1Z" fill="currentColor"/>
+    </svg>
+    <span data-streak-count>{{ count }}</span><span class="visually-hidden">-{{ unit[:-1] }} streak</span>
+  </span>
+{%- endmacro %}
+
 {# A habit's round icon, in its own colour. #}
 {% macro habit_icon(habit, size="") -%}
   <span class="habit-icon {{ size }}" style="--habit: var(--habit-{{ habit.color }})" aria-hidden="true">{{ habit.icon }}</span>

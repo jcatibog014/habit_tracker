@@ -1,8 +1,12 @@
-"""The Habits tab: the list, add, edit, archive, delete and reorder (by dragging)."""
+"""The Habits tab: the list, one habit's page, add, edit, archive, delete and reorder (by dragging)."""
+from datetime import timedelta
+
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
-from .. import db
+from .. import db, grids, queries, streaks
 from ..auth import login_required
+from ..daily import day_sets
+from ..dates import add_months
 from ..validation import (
     COLOR_LABELS, COLORS, ICONS, KINDS, SCHEDULES, habit_form_values, validate_habit,
 )
@@ -19,6 +23,7 @@ SUGGESTIONS = {
     "Pray": ("🙏", "gold", "check", 1, ""),
     "Sleep by 10 PM": ("😴", "teal", "check", 1, ""),
     "Stretch": ("🧘", "pink", "check", 1, ""),
+    "No soda": ("🥤", "red", "avoid", 1, ""),
 }
 
 
@@ -73,11 +78,11 @@ def new():
         )["next"]
         db.execute(
             """INSERT INTO habits (user_id, name, icon, color, kind, target, unit, schedule,
-                                   weekdays, per_week, start_date, position, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                                   weekdays, per_week, start_date, avoid, position, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (g.user["id"], data["name"], data["icon"], data["color"], data["kind"], data["target"],
              data["unit"], data["schedule"], data["weekdays"], data["per_week"], data["start_date"],
-             position, today.isoformat()),
+             data["avoid"], position, today.isoformat()),
         )
         db.commit()
         flash(f"{data['icon']} {data['name']} is on your list. Small steps, every day! 🌱")
@@ -109,16 +114,56 @@ def edit(habit_id):
             return form_page(read_form(), errors, habit)
         db.execute(
             """UPDATE habits SET name = ?, icon = ?, color = ?, kind = ?, target = ?, unit = ?,
-                                 schedule = ?, weekdays = ?, per_week = ?, start_date = ?
+                                 schedule = ?, weekdays = ?, per_week = ?, start_date = ?, avoid = ?
                WHERE id = ? AND user_id = ?""",
             (data["name"], data["icon"], data["color"], data["kind"], data["target"], data["unit"],
-             data["schedule"], data["weekdays"], data["per_week"], data["start_date"],
+             data["schedule"], data["weekdays"], data["per_week"], data["start_date"], data["avoid"],
              habit_id, g.user["id"]),
         )
         db.commit()
         flash(f"Saved {data['icon']} {data['name']}.")
-        return redirect(url_for("habits.index"))
+        return redirect(url_for("habits.detail", habit_id=habit_id))
     return form_page(habit_form_values(habit), {}, habit)
+
+
+@bp.get("/<int:habit_id>")
+@login_required
+def detail(habit_id):
+    """One habit's page: streaks, badges, the year heatmap and a month calendar."""
+    habit = owned_habit(habit_id)
+    today = user_today()
+    start = streaks.start_of(habit)
+    days = queries.history(g.user["id"], min(start, today), today, habit_id).get(habit_id, {})
+    sets = day_sets(habit, days, today)
+    done, rest, _ = sets
+
+    current = streaks.current_streak(habit, done, rest, today)
+    longest = streaks.longest_streak(habit, done, rest, today)
+    upcoming = streaks.next_milestone(habit, current)
+    month = grids.parse_month(request.args.get("month"), today)
+    year_columns, year_months = grids.year_grid(habit, sets, days, today)
+    return render_template(
+        "habit.html",
+        habit=habit,
+        unit=streaks.unit(habit),
+        current=current,
+        longest=longest,
+        score=streaks.completion(habit, done, rest, today - timedelta(days=29), today),
+        total=len(done),
+        milestones=streaks.MILESTONES[streaks.unit(habit)],
+        earned=streaks.earned(habit, longest),
+        upcoming=upcoming,
+        to_go=upcoming - current if upcoming else None,
+        month=month,
+        month_weeks=grids.month_grid(habit, sets, days, month, today),
+        previous_month=add_months(month, -1),
+        next_month=add_months(month, 1) if month < today.replace(day=1) else None,
+        year_columns=year_columns,
+        year_months=year_months,
+        monthly=grids.monthly_totals(habit, done, today),
+        today=today,
+        started=today >= start,
+    )
 
 
 @bp.post("/<int:habit_id>/archive")

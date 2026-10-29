@@ -1,24 +1,40 @@
 {% extends "base.html" %}
-{% from "_macros.html" import habit_icon, fab, empty_ideas %}
+{% from "_macros.html" import habit_icon, fab, empty_ideas, flame %}
 {% block title %}Today · {{ APP_NAME }}{% endblock %}
 
 {# One habit for today. The big round button on the right is the main action:
-   one tap ticks it (or, for a count, adds one). The forms work without
+   one tap ticks it (for a count, adds one; for a habit to avoid, records a
+   slip). The small moon makes today a rest day. The forms work without
    JavaScript; app.js sends them with fetch() so the page doesn't reload. #}
 {% macro today_card(card) -%}
   {% set habit = card.habit %}
-  {% set is_count = habit.kind == 'count' %}
-  <li class="today-card{% if card.done %} is-done{% endif %}" id="habit-{{ habit.id }}"
-      style="--habit: var(--habit-{{ habit.color }})" data-habit data-name="{{ habit.name }}" data-kind="{{ habit.kind }}">
-    {{ habit_icon(habit) }}
+  {% set kind = 'avoid' if habit.avoid else habit.kind %}
+  <li class="today-card{% if card.done %} is-done{% endif %}{% if card.rested %} is-rested{% endif %}{% if card.slipped %} is-slipped{% endif %}"
+      id="habit-{{ habit.id }}" style="--habit: var(--habit-{{ habit.color }})"
+      data-habit data-name="{{ habit.name }}" data-kind="{{ kind }}">
+    <a class="habit-link" href="{{ url_for('habits.detail', habit_id=habit.id) }}" tabindex="-1" aria-hidden="true">{{ habit_icon(habit) }}</a>
     <div class="today-main">
-      <span class="habit-name">{{ habit.name }}</span>
-      <span class="habit-meta" data-line>
-        {% if card.week_reached %}Week goal reached <span class="emoji" aria-hidden="true">🎉</span>{% else %}{{ card.line }}{% endif %}
+      <span class="name-row">
+        <a class="habit-name" href="{{ url_for('habits.detail', habit_id=habit.id) }}">{{ habit.name }}</a>
+        {{ flame(card.streak, card.unit) }}
       </span>
+      <span class="habit-meta" data-line>
+        {% if card.week_reached %}Week goal reached{% else %}{{ card.line }}{% endif %}
+      </span>
+      <span class="nudge" data-nudge {% if not card.nudge %}hidden{% endif %}>{{ card.nudge or '' }}</span>
     </div>
     <div class="today-actions">
-      {% if is_count %}
+      <form method="post" action="{{ url_for('main.checkin', habit_id=habit.id) }}" data-checkin>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="rest">
+        <button type="submit" class="icon-button quiet rest-button" data-rest
+                aria-label="Rest day: {{ habit.name }}" aria-pressed="{{ 'true' if card.rested else 'false' }}">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </form>
+      {% if kind == 'count' %}
         <form method="post" action="{{ url_for('main.checkin', habit_id=habit.id) }}" data-checkin>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="action" value="minus">
@@ -29,21 +45,42 @@
             </svg>
           </button>
         </form>
+      {% else %}
+        {# Keeps the moon buttons of all habits in one straight column. #}
+        <span class="minus-space" aria-hidden="true"></span>
       {% endif %}
       <form method="post" action="{{ url_for('main.checkin', habit_id=habit.id) }}" data-checkin>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="action" value="{{ 'plus' if is_count else 'toggle' }}">
+        <input type="hidden" name="action" value="{{ 'plus' if kind == 'count' else 'toggle' }}">
         <button type="submit" class="check-button" style="--percent: {{ card.percent }}" data-check
-                {% if is_count %}aria-label="Add one: {{ habit.name }}, {{ card.line }}"
+                {% if kind == 'count' %}aria-label="Add one: {{ habit.name }}, {{ card.line }}"
+                {% elif kind == 'avoid' %}aria-label="I slipped: {{ habit.name }}" aria-pressed="{{ 'true' if card.slipped else 'false' }}"
                 {% else %}aria-label="Done: {{ habit.name }}" aria-pressed="{{ 'true' if card.done else 'false' }}"{% endif %}>
           <svg class="check-mark" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
             <path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          {% if is_count %}<span class="check-count" aria-hidden="true" data-count>{{ card.value }}</span>{% endif %}
+          {% if kind == 'avoid' %}
+            <svg class="slip-mark" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+              <path d="M7 12h10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+          {% endif %}
+          {% if kind == 'count' %}<span class="check-count" aria-hidden="true" data-count>{{ card.value }}</span>{% endif %}
         </button>
       </form>
     </div>
   </li>
+{%- endmacro %}
+
+{# Today's quote. "Another" shows the next one from the list (app.js). #}
+{% macro quote_card() -%}
+  <figure class="quote-card" data-quote>
+    <blockquote><p data-quote-text>{{ quote }}</p></blockquote>
+    <figcaption>
+      <span>— <span data-quote-author>{{ quote_author }}</span></span>
+      <button type="button" class="link-button js-only" data-next-quote>Another</button>
+    </figcaption>
+  </figure>
+  <script type="application/json" id="quotes-data" data-start="{{ quote_index }}">{{ quotes | tojson }}</script>
 {%- endmacro %}
 
 {% block content %}
@@ -51,6 +88,7 @@
   <div class="page-title">
     <h1>{{ greeting }}! <span class="emoji" aria-hidden="true">{{ greeting_emoji }}</span></h1>
   </div>
+  {{ quote_card() }}
   {{ empty_ideas(suggestions) }}
 {% else %}
   <section class="today-hero{% if summary.total and summary.done == summary.total %} is-perfect{% endif %}" data-hero aria-labelledby="today-title">
@@ -65,6 +103,19 @@
       <span class="ring-label">done</span>
     </div>
   </section>
+
+  {# A milestone celebration appears here (app.js), e.g. "30 days of Read. Ang galing!" #}
+  <div class="milestone-card" data-milestone role="status" hidden>
+    <span class="milestone-badge" aria-hidden="true" data-milestone-count></span>
+    <p data-milestone-text></p>
+    <button type="button" class="flash-close" aria-label="Close" data-milestone-close>
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+        <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  {{ quote_card() }}
 
   {% if day.due %}
     <ol class="today-list" aria-label="For today">

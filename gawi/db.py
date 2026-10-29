@@ -122,7 +122,10 @@ def schema_sql():
 # database from init-db already has everything, so init_db() marks them all
 # as done. Never change one that has run on the live site: add a new one at
 # the end, and change schema.sql the same way.
-MIGRATIONS = []
+MIGRATIONS = [
+    # 1: habits to avoid ("No soda").
+    ["ALTER TABLE habits ADD COLUMN avoid INTEGER NOT NULL DEFAULT 0"],
+]
 
 
 def schema_version():
@@ -137,12 +140,30 @@ def set_schema_version(version):
     execute("INSERT INTO schema_version (version) VALUES (?)", (version,))
 
 
-def upgrade_db():
-    """Run the migrations this database doesn't have yet. Returns (old, new) version.
+def has_tables():
+    """Does this database have Gawi's tables yet? (A new Neon database has none.)
 
-    Each migration is saved (committed) on its own, so if one fails, the
-    ones before it stay done and the next run starts at the failed one.
+    Each database keeps its own list of tables, so this is the one place
+    where we ask SQLite and Postgres differently.
     """
+    if is_postgres():
+        return query_one("SELECT to_regclass('public.users') IS NOT NULL AS found")["found"]
+    return query_one(
+        "SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'table' AND name = 'users'"
+    )["n"] > 0
+
+
+def upgrade_db():
+    """Bring the database up to date. Returns (old, new) version; old is None for a new, empty one.
+
+    An empty database gets all the tables (init_db). Otherwise the missing
+    migrations run, each saved (committed) on its own, so if one fails, the
+    ones before it stay done and the next run starts at the failed one.
+    This never deletes data, so Render runs it before every start.
+    """
+    if not has_tables():
+        init_db()
+        return None, len(MIGRATIONS)
     old = schema_version()
     for number, statements in enumerate(MIGRATIONS[old:], start=old + 1):
         for sql in statements:
@@ -179,7 +200,9 @@ def init_db_command(yes):
 def upgrade_db_command():
     """Bring the tables up to date, keeping all data. Safe to run any time."""
     old, new = upgrade_db()
-    if old == new:
+    if old is None:
+        click.echo(f"The database was empty: made the tables (version {new}).")
+    elif old == new:
         click.echo(f"The database is up to date (version {new}).")
     else:
         click.echo(f"Upgraded the database from version {old} to {new}.")

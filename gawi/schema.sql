@@ -41,6 +41,9 @@ CREATE TABLE habits (
     weekdays TEXT NOT NULL DEFAULT '',
     per_week INTEGER CHECK (per_week BETWEEN 1 AND 6),
     start_date TEXT NOT NULL,            -- nothing before this day counts
+    -- 1 for a habit to stop ("No soda"): it's a yes/no habit where a
+    -- check-in means "I slipped", so a day with no row is a success.
+    avoid INTEGER NOT NULL DEFAULT 0,
     archived_at TEXT,                    -- hidden but kept (with its history) when set
     position INTEGER NOT NULL DEFAULT 0, -- the order on the page
     created_at TEXT NOT NULL,
@@ -59,7 +62,7 @@ CREATE TABLE checkins (
     habit_id INTEGER NOT NULL REFERENCES habits (id) ON DELETE CASCADE,
     day TEXT NOT NULL,
     value INTEGER NOT NULL DEFAULT 0 CHECK (value >= 0),  -- done when value >= the habit's target
-    skipped INTEGER NOT NULL DEFAULT 0,  -- a rest day: it doesn't break a streak or lower the score
+    skipped INTEGER NOT NULL DEFAULT 0,  -- a rest day (value 0): it doesn't break a streak or lower the score
     note TEXT NOT NULL DEFAULT '',
     -- One row per day. This also gives the database an index on (habit_id, day),
     -- which every "check-ins between these days" query uses.

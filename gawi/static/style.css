@@ -807,10 +807,257 @@ a.habit-main:hover .habit-name { text-decoration: underline; }
 @keyframes card-pop { 40% { transform: scale(1.02); } }
 @keyframes tick-pop { 0% { transform: scale(0.7); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
 
-.minus-button { width: 40px; height: 40px; }
+.minus-button, .minus-space { width: 40px; height: 40px; flex: none; }
 .rest summary { cursor: pointer; font-weight: 800; min-height: 44px; display: flex; align-items: center; }
 .rest .today-card { box-shadow: none; }
 .rest-note { font-weight: 700; }
+
+/* The name (a link to the habit's page) with its streak flame beside it. */
+.name-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
+.today-card .habit-name { text-decoration: none; }
+.today-card .habit-name:hover { text-decoration: underline; }
+.habit-link { display: block; flex: none; border-radius: 50%; }
+.streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+.streak svg { color: var(--flame); }
+.streak[hidden] { display: none; }
+/* A gentle push under the line: "12-day streak. Keep it going!" */
+.nudge { color: var(--primary); font-size: 0.9rem; font-weight: 700; }
+.nudge[hidden] { display: none; }
+
+/* The moon: a rest day. Quiet until it's on. */
+.rest-button[aria-pressed="true"] { background: color-mix(in srgb, var(--skip) 22%, var(--card)); color: var(--ink); }
+
+/* A rest day: calm grey, and the main button steps back. */
+.today-card.is-rested { background: color-mix(in srgb, var(--skip) 10%, var(--card)); }
+.today-card.is-rested .check-button { opacity: 0.55; }
+
+/* A habit to avoid: clean is a green tick (like done); a slip is grey with a dash, never red. */
+.today-card[data-kind="avoid"] .check-button { background: radial-gradient(closest-side, var(--card) 86%, var(--habit) 87%); }
+.today-card[data-kind="avoid"].is-done .check-button { background: var(--done); color: var(--on-done); }
+.slip-mark { display: none; }
+.today-card.is-slipped { background: color-mix(in srgb, var(--skip) 12%, var(--card)); }
+.today-card.is-slipped .check-button { background: color-mix(in srgb, var(--skip) 30%, var(--card)); color: var(--ink); }
+.today-card.is-slipped .check-mark { display: none; }
+.today-card.is-slipped .slip-mark { display: block; }
+
+/* A milestone reached: a warm card with a round badge, under the hero. */
+.milestone-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 16px;
+  padding: 10px 6px 10px 12px;
+  border-radius: var(--radius);
+  background: var(--hero-bg);
+  box-shadow: var(--shadow);
+  font-weight: 800;
+}
+.milestone-card[hidden] { display: none; }
+.milestone-card p { flex: 1; margin: 0; }
+.milestone-badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--flame);
+  color: #2d2240;
+  font-family: var(--font-round);
+  font-size: 1.2rem;
+}
+.milestone-card.celebrate { animation: sunburst-card 1s ease-out; }
+@keyframes sunburst-card {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--flame) 70%, transparent); transform: scale(0.97); }
+  40% { transform: scale(1.01); }
+  100% { box-shadow: 0 0 0 24px transparent; transform: scale(1); }
+}
+
+/* Quote of the day: quiet, so it inspires without shouting. */
+.quote-card {
+  margin: 0 0 16px;
+  padding: 14px 20px;
+  border-left: 4px solid var(--flame);
+  border-radius: var(--radius-small);
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+.quote-card blockquote { margin: 0; }
+.quote-card blockquote p { margin: 0; font-size: 1.05rem; font-style: italic; font-weight: 600; }
+.quote-card figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+}
+.quote-card.quote-change blockquote { animation: slide-in 0.3s ease-out; }
+/* A button that looks like a link. */
+.link-button {
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.welcome-quote { font-style: italic; font-size: 1rem !important; }
+.welcome-quote span { font-style: normal; white-space: nowrap; }
+
+/* ---------- A habit's page ---------- */
+
+.habit-title { align-items: center; }
+.habit-heading { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.habit-heading h1 { margin: 0; }
+.habit-heading .habit-meta { margin: 0; }
+
+/* Four numbers in a row (two on phones), all the same size. */
+.stat-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 8px 0 16px; }
+.stat-tile {
+  display: grid;
+  gap: 2px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--card-border);
+  border-top: 4px solid var(--habit);
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+.stat-label { color: var(--ink-soft); font-weight: 700; font-size: 0.9rem; }
+.stat-value { font-family: var(--font-round); font-size: 1.8rem; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat-value small { font-family: var(--font-body); font-size: 0.95rem; font-weight: 700; color: var(--ink-soft); }
+
+/* Milestone badges: earned ones glow in the habit's colour, the next one waits in grey. */
+.badges { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 20px; }
+.badge { display: grid; justify-items: center; gap: 6px; min-width: 76px; text-align: center; }
+.badge-circle {
+  display: grid;
+  place-content: center;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  border: 3px dashed var(--control-border);
+  color: var(--ink-soft);
+  line-height: 1;
+}
+.badge-circle strong { font-family: var(--font-round); font-size: 1.4rem; font-weight: 600; }
+.badge-circle small { font-size: 0.75rem; font-weight: 700; }
+.badge.is-earned .badge-circle {
+  border: 3px solid var(--habit);
+  background: color-mix(in srgb, var(--habit) 18%, var(--card));
+  color: var(--ink);
+}
+.badge.is-next .badge-circle { border-color: var(--ink-soft); color: var(--ink); }
+.badge-text { font-size: 0.85rem; font-weight: 700; color: var(--ink-soft); }
+.badge.is-earned .badge-text { color: var(--ink); }
+
+/* The year heatmap: one square a day, in the habit's colour. */
+.heatmap-scroll { overflow-x: auto; padding-bottom: 4px; }
+.heatmap {
+  --cell: 13px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  gap: 4px 6px;
+  width: max-content;
+}
+.heatmap-months {
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: repeat(53, var(--cell));
+  gap: 3px;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.heatmap-days {
+  grid-column: 1;
+  display: grid;
+  grid-template-rows: repeat(7, var(--cell));
+  gap: 3px;
+  font-size: 0.7rem;
+  line-height: var(--cell);
+  color: var(--ink-soft);
+}
+.heatmap-grid {
+  grid-column: 2;
+  display: grid;
+  grid-template-rows: repeat(7, var(--cell));
+  grid-auto-flow: column;
+  grid-auto-columns: var(--cell);
+  gap: 3px;
+}
+.heat { display: inline-block; width: var(--cell, 13px); height: var(--cell, 13px); border-radius: 3px; background: var(--ring-track); }
+.heat-none, .heat-future { background: transparent; }
+.heat-off, .heat-before { background: transparent; box-shadow: inset 0 0 0 1px var(--card-border); }
+.heat.level-1 { background: color-mix(in srgb, var(--habit) 30%, var(--card)); }
+.heat.level-2 { background: color-mix(in srgb, var(--habit) 52%, var(--card)); }
+.heat.level-3 { background: color-mix(in srgb, var(--habit) 76%, var(--card)); }
+.heat.level-4 { background: var(--habit); }
+.heat-rest { background: color-mix(in srgb, var(--skip) 45%, var(--card)); }
+.heat-slipped { background: color-mix(in srgb, var(--skip) 85%, var(--card)); }
+.heat-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; margin: 12px 0 0; color: var(--ink-soft); font-size: 0.85rem; }
+.heat-legend .heat-rest { margin-left: 12px; }
+
+.table-toggle { margin-top: 8px; }
+.table-toggle summary { cursor: pointer; font-weight: 700; color: var(--ink-soft); min-height: 44px; display: flex; align-items: center; }
+.data-table { border-collapse: collapse; min-width: 260px; }
+.data-table th, .data-table td { padding: 6px 16px 6px 0; text-align: left; border-bottom: 1px solid var(--card-border); }
+.data-table td:last-child, .data-table th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* The month calendar: tap a day to fix it. */
+/* The month title row is exactly as wide as the calendar under it, so the arrows sit over its edges. */
+.month-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 560px; }
+.month-nav h2 { margin: 0; }
+.icon-button-space { width: 44px; }
+.calendar-hint { margin: 8px 0 12px; }
+.calendar { display: grid; gap: 6px; max-width: 560px; }
+.calendar-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.calendar-head { color: var(--ink-soft); font-size: 0.85rem; font-weight: 700; text-align: center; }
+.calendar form { margin: 0; }
+.day-cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-small);
+  background: var(--card);
+  font-weight: 700;
+  cursor: pointer;
+}
+.day-cell:hover:not(:disabled) { border-color: var(--control-border); }
+.day-cell:disabled { cursor: default; color: var(--ink-soft); opacity: 0.5; }
+.day-mark { position: absolute; bottom: 5px; width: 6px; height: 6px; border-radius: 50%; }
+.day-done { background: color-mix(in srgb, var(--habit) 22%, var(--card)); border-color: var(--habit); }
+.day-done .day-mark { background: var(--habit); }
+.day-partial .day-mark { background: color-mix(in srgb, var(--habit) 50%, var(--card)); }
+.day-rest { background: color-mix(in srgb, var(--skip) 18%, var(--card)); }
+.day-rest .day-mark { width: 10px; height: 3px; border-radius: 2px; background: var(--skip); }
+.day-slipped { background: color-mix(in srgb, var(--skip) 30%, var(--card)); }
+.day-slipped .day-mark { width: 10px; height: 3px; border-radius: 2px; background: var(--ink-soft); }
+.day-off { color: var(--ink-soft); background: transparent; }
+.day-cell.is-today { box-shadow: 0 0 0 2px var(--primary); }
+
+.install-steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.install-button[hidden] { display: none; }
+.install-button { justify-self: stretch; }
+.offline-page { min-height: 100vh; }
 
 /* ---------- The "New habit" button ---------- */
 
@@ -901,7 +1148,8 @@ a.habit-main:hover .habit-name { text-decoration: underline; }
   }
   .no-sidebar .sidebar-top { max-width: none; margin: 0; min-height: 48px; padding: 0; }
   /* The welcome sits in the middle of the panel. */
-  .no-sidebar .welcome { flex: 1; align-content: center; gap: 16px; padding: 0 0 48px; }
+  /* The welcome sits near the top of the panel, just under the logo row. */
+  .no-sidebar .welcome { flex: 1; align-content: start; gap: 16px; padding: clamp(8px, 3vh, 40px) 0 24px; }
   .no-sidebar .welcome h1 { font-size: 2.8rem; }
   .no-sidebar .welcome p { font-size: 1.15rem; }
   .no-sidebar .welcome-sun { width: 120px; height: 120px; }
@@ -945,6 +1193,19 @@ a.habit-main:hover .habit-name { text-decoration: underline; }
   .today-hero { gap: 12px; }
   .today-hero h1 { font-size: 1.3rem; }
   .today-message { font-size: 0.95rem; }
+  .stat-tiles { grid-template-columns: repeat(2, 1fr); }
+  .stat-value { font-size: 1.5rem; }
+  /* All four badges in one row. */
+  .badges { gap: 8px; justify-content: space-between; }
+  .badge { min-width: 64px; }
+  .badge-circle { width: 58px; height: 58px; }
+  .badge-circle strong { font-size: 1.2rem; }
+  /* Seven days must fit across: a little less padding and gap, and cells as tall as a finger. */
+  .calendar-card { padding: 16px 14px; }
+  .calendar, .calendar-row { gap: 4px; }
+  .day-cell { aspect-ratio: auto; height: 44px; }
+  .today-actions { gap: 4px; }
+  .rest-button { width: 40px; height: 40px; }
 
   .icon-grid { grid-template-columns: repeat(6, 1fr); }
   .choice-cards, .choice-cards.three, .sub-fields { grid-template-columns: 1fr; }

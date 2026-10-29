@@ -70,17 +70,17 @@ def add_habit(app, user_id, name="Drink water", **fields):
     habit = {
         "icon": "💧", "color": "blue", "kind": "check", "target": 1, "unit": "",
         "schedule": "daily", "weekdays": "", "per_week": None,
-        "start_date": "2026-10-01", "archived_at": None, "position": 0,
+        "start_date": "2026-10-01", "archived_at": None, "position": 0, "avoid": 0,
         "created_at": "2026-10-01", **fields,
     }
     with app.app_context():
         habit_id = db.insert(
             """INSERT INTO habits (user_id, name, icon, color, kind, target, unit, schedule, weekdays,
-                                   per_week, start_date, archived_at, position, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id""",
+                                   per_week, start_date, archived_at, position, created_at, avoid)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id""",
             (user_id, name, habit["icon"], habit["color"], habit["kind"], habit["target"], habit["unit"],
              habit["schedule"], habit["weekdays"], habit["per_week"], habit["start_date"],
-             habit["archived_at"], habit["position"], habit["created_at"]),
+             habit["archived_at"], habit["position"], habit["created_at"], habit["avoid"]),
         )
         db.commit()
         return habit_id
