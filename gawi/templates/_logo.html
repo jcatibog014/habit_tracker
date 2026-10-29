@@ -1,5 +1,6 @@
-{# The logo: a sun rising over the horizon. The same drawing is static/icons/logo.svg. #}
-<svg class="logo" viewBox="0 0 48 48" width="36" height="36" aria-hidden="true">
+{# The logo: a sun rising over the horizon. The same drawing is static/icons/logo.svg.
+   Include it as is (36px), or inside {% with logo_size=120, logo_class="..." %} for a bigger one. #}
+<svg class="logo{{ ' ' ~ logo_class if logo_class }}" viewBox="0 0 48 48" width="{{ logo_size or 36 }}" height="{{ logo_size or 36 }}" aria-hidden="true">
   <path d="M24 7v6M10.5 13.5l4 4M37.5 13.5l-4 4M4 27h6M38 27h6" stroke="#c2410c" stroke-width="3" stroke-linecap="round"/>
   <path d="M11 35a13 13 0 0 1 26 0Z" fill="#ff922b"/>
   <path d="M17 35a7 7 0 0 1 14 0Z" fill="#ffd43b"/>
