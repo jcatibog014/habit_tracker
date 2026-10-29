@@ -16,7 +16,7 @@ from flask import Flask, render_template
 mimetypes.add_type("application/manifest+json", ".webmanifest")
 
 from . import messages, schedule, validation
-from .dates import short_date, today
+from .dates import short_date
 
 # One emoji font for everyone, so the icons look the same (flat and colourful)
 # on Windows, Android and iPhone. "text=" asks Google Fonts for only the
@@ -88,8 +88,6 @@ def create_app(test_config=None):
     app.jinja_env.filters["goal"] = schedule.goal
     app.jinja_env.globals["APP_NAME"] = "Gawi"
     app.jinja_env.globals["EMOJI_FONT_URL"] = EMOJI_FONT_URL
-    # The login panel's quote: the same one the Today page shows (in Philippine time).
-    app.jinja_env.globals["quote_today"] = lambda: messages.quote_of_the_day(today())
 
     @app.after_request
     def security_headers(response):

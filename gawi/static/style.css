@@ -913,8 +913,6 @@ a.habit-main:hover .habit-name { text-decoration: underline; }
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-.welcome-quote { font-style: italic; font-size: 1rem !important; }
-.welcome-quote span { font-style: normal; white-space: nowrap; }
 
 /* ---------- A habit's page ---------- */
 

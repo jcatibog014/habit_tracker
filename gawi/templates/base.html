@@ -110,8 +110,6 @@
           {% with logo_size=120, logo_class="welcome-sun" %}{% include "_logo.html" %}{% endwith %}
           <h1>Magandang araw!</h1>
           <p>Start your habit journey here. Tick off small steps, keep your streak alive, and watch your progress glow.</p>
-          {% set _, quote, author = quote_today() %}
-          <p class="welcome-quote">“{{ quote }}” <span>— {{ author }}</span></p>
         </div>
       {% endif %}
     </header>
