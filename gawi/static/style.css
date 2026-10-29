@@ -268,7 +268,9 @@ p { margin: 0 0 12px; }
   padding-top: 16px;
   border-top: 1px solid var(--header-border);
 }
-.sidebar-user { font-weight: 800; color: var(--header-soft); overflow-wrap: anywhere; }
+/* The username: plain text, no pill. */
+.sidebar-user { display: grid; margin: 0; font-weight: 800; color: var(--header-ink); overflow-wrap: anywhere; }
+.sidebar-user-note { font-size: 0.85rem; font-weight: 600; color: var(--header-soft); }
 .sidebar-actions { display: flex; align-items: center; gap: 8px; }
 .sidebar-actions form { margin: 0; }
 
@@ -367,49 +369,16 @@ p { margin: 0 0 12px; }
 .site-nav a[aria-current="page"] { background: var(--tab-active); color: var(--header-ink); }
 .nav-icon { flex: none; }
 
-/* "Demo": a small badge instead of a big banner.
-   Hover it (or focus it with the keyboard) for the tip. */
-.demo-badge {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: var(--card);
-  color: var(--primary);
-  font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  cursor: help;
-}
-.demo-badge:hover::after, .demo-badge:focus-visible::after {
-  content: attr(data-tip);
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 0;
-  z-index: 30;
-  width: max-content;
-  max-width: 220px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: var(--ink);
-  color: var(--bg);
-  font-size: 0.9rem;
-  font-weight: 700;
-  letter-spacing: 0;
-  text-transform: none;
-  box-shadow: var(--shadow);
-}
-
 /* Things that only work with JavaScript (like the drag handles) hide without it. */
 html:not(.js) .js-only { display: none !important; }
 
+/* The page fills the space next to the sidebar. Only on very wide screens
+   (over about 1700px) does it stop growing, so a check button never ends
+   up too far from its habit's name. */
 .page {
   flex: 1;
   width: 100%;
-  max-width: 760px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 24px 16px 40px;
 }

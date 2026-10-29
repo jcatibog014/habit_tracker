@@ -97,8 +97,8 @@ def test_unknown_action(owner_client, app, owner_id):
     assert post(owner_client, f"/checkin/{habit_id}", {"action": "explode"}).status_code == 400
 
 
-def test_the_demo_badge_replaces_the_banner(client):
+def test_the_demo_shows_its_name_as_plain_text(client):
     post(client, "/demo")
     page = client.get("/").get_data(as_text=True)
-    assert 'class="demo-badge"' in page and "start fresh every hour" in page
-    assert "demo-banner" not in page
+    assert '<p class="sidebar-user">' in page and "fresh every hour" in page
+    assert "demo-badge" not in page and "demo-banner" not in page

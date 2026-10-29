@@ -79,14 +79,10 @@
           </nav>
 
           <div class="sidebar-footer">
-            {% if g.user.is_demo %}
-              {# A small badge instead of a big banner. The tip shows on hover and keyboard focus. #}
-              <span class="demo-badge" tabindex="0" data-tip="Made-up habits. They start fresh every hour.">
-                Demo<span class="visually-hidden">: made-up habits that start fresh every hour</span>
-              </span>
-            {% else %}
-              <span class="sidebar-user">{{ g.user.username }}</span>
-            {% endif %}
+            <p class="sidebar-user">
+              {{ g.user.username }}
+              {% if g.user.is_demo %}<span class="sidebar-user-note">Sample habits, fresh every hour</span>{% endif %}
+            </p>
             <div class="sidebar-actions">
               {% include "_theme_button.html" %}
               <form method="post" action="{{ url_for('auth.logout') }}">
