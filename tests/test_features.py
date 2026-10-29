@@ -175,13 +175,13 @@ def test_quote_of_the_day():
     assert len({quote for quote, _ in QUOTES}) == len(QUOTES)  # no repeats in the list
 
 
-def test_the_quote_shows_on_today_and_the_login_page(owner_client, app, owner_id, client):
+def test_the_quote_shows_on_today_but_not_on_the_login_page(owner_client, app, owner_id):
     add_habit(app, owner_id, "Walk")
-    _, _, author = quote_of_the_day(today())
+    _, quote, author = quote_of_the_day(today())
     page = owner_client.get("/").get_data(as_text=True)
     assert 'id="quotes-data"' in page and "data-next-quote" in page and author in page
     login = app.test_client().get("/login").get_data(as_text=True)
-    assert "welcome-quote" in login
+    assert author not in login and "welcome-quote" not in login
 
 
 # ---------- Install on a phone ----------
