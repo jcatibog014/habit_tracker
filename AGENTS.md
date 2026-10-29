@@ -69,6 +69,7 @@ Ported from `Documents\Workspace\expense_tracker` (Ang Gastos!): `db.py`, `auth.
 - One branch + PR per stage of `docs/PLAN.md`. On this Windows machine, pass commit messages and PR bodies as files (`git commit -F`, `gh pr create --body-file`).
 - Add or update a test with every behaviour change. Date logic is tested with fixed dates, never the real today.
 - Use sentence case for headings and buttons.
+- **Screenshots:** the README pictures live in `docs/screenshots/` and are taken as the demo user by `docs/take_screenshots.py` (Playwright + Edge, run from the expense_tracker venv; `reset-demo` first). Desktop shots make the window as tall as the page instead of using `full_page`, because the sticky sidebar would be cut off. Add new pages to `PAGES`, and take the pictures again when a page changes visibly.
 - **Deploy:** Render + Neon, as in Gastos.
   - `render.yaml` defines the Render service `gawi` (free plan, Singapore): `flask --app gawi upgrade-db && gunicorn "gawi:create_app()" --workers 2`, `healthCheckPath: /healthz`, a generated `SECRET_KEY`, and `DATABASE_URL` (`sync: false`; the owner pastes Neon's **pooled** string).
   - `upgrade_db()` makes all the tables when the database is empty (`has_tables()`), so a new Neon database needs no `init-db`. Never run `init-db` against the live database: it deletes everything.

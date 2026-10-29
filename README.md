@@ -16,6 +16,41 @@
 
 The app is still being built. The plan is in [docs/PLAN.md](docs/PLAN.md).
 
+## Screenshots
+
+The pictures show the **demo** account, so all the habits are made up.
+
+**Today.** Tap the big round button to tick a habit. The ring shows how much of today is done.
+
+![The Today page](docs/screenshots/today.png)
+
+**A habit's page.** Your streaks, your badges, a year of squares, and a calendar to fix days you forgot.
+
+![A habit's page](docs/screenshots/habit.png)
+
+**Your habits.** Drag the dots to change the order.
+
+![The list of habits](docs/screenshots/habits.png)
+
+**A new habit.** Choose an icon, a colour, how you track it, and when.
+
+![The new habit form](docs/screenshots/new-habit.png)
+
+**Dark mode.** Press the moon button to change it.
+
+![The Today page in dark mode](docs/screenshots/today-dark.png)
+
+**Log in.** Or press "Try the demo".
+
+![The login page](docs/screenshots/login.png)
+
+**On a phone.** The menu is behind the ☰ button.
+
+<p>
+  <img src="docs/screenshots/phone.png" alt="The Today page on a phone" width="260">
+  <img src="docs/screenshots/phone-habit.png" alt="A habit's page on a phone, in dark mode" width="260">
+</p>
+
 ## How to run it
 
 You need Python 3.13.
