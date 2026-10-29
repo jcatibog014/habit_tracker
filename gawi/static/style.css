@@ -870,11 +870,13 @@ a.habit-main:hover .habit-name { text-decoration: underline; }
 /* Logged out, the page is split like the app: the sunrise panel on the
    left (where the sidebar is) with the welcome, and the login card
    centred on the cream side. On phones the panel sits on top. */
+/* The big logo, the greeting and the line under it are centred in the panel. */
 .welcome {
   display: grid;
-  justify-items: start;
+  justify-items: center;
   gap: 12px;
   padding: 8px 16px 28px;
+  text-align: center;
 }
 .welcome h1 { margin: 0; font-size: 2rem; color: var(--header-ink); }
 .welcome p { margin: 0; max-width: 34ch; color: var(--header-soft); font-weight: 700; }
