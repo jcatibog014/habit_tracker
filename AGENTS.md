@@ -69,3 +69,9 @@ Ported from `Documents\Workspace\expense_tracker` (Ang Gastos!): `db.py`, `auth.
 - One branch + PR per stage of `docs/PLAN.md`. On this Windows machine, pass commit messages and PR bodies as files (`git commit -F`, `gh pr create --body-file`).
 - Add or update a test with every behaviour change. Date logic is tested with fixed dates, never the real today.
 - Use sentence case for headings and buttons.
+- **Deploy:** Render + Neon, as in Gastos.
+  - `render.yaml` defines the Render service `gawi` (free plan, Singapore): `flask --app gawi upgrade-db && gunicorn "gawi:create_app()" --workers 2`, `healthCheckPath: /healthz`, a generated `SECRET_KEY`, and `DATABASE_URL` (`sync: false`; the owner pastes Neon's **pooled** string).
+  - `upgrade_db()` makes all the tables when the database is empty (`has_tables()`), so a new Neon database needs no `init-db`. Never run `init-db` against the live database: it deletes everything.
+  - The owner's login is made once from the owner's PC, with `DATABASE_URL` set (`create-user`).
+  - The owner does the Neon/Render steps. Don't rename the service once it's live, or Render builds a second one.
+  - If an auto-deploy doesn't start after a merge (it happened once with Ambon Alert), use Manual Deploy and check the live commit.

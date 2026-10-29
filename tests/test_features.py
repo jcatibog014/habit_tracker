@@ -222,6 +222,25 @@ def test_upgrade_an_old_database(tmp_path):
         assert db.upgrade_db() == (len(db.MIGRATIONS), len(db.MIGRATIONS))  # safe to run again
 
 
+def test_upgrade_makes_the_tables_in_an_empty_database(tmp_path):
+    """A brand-new database (like a new Neon one): upgrade-db makes everything, so the first deploy just works."""
+    from gawi import create_app
+    app = create_app({"TESTING": True, "SECRET_KEY": "t", "DATABASE": str(tmp_path / "new.sqlite"), "DATABASE_URL": None})
+    result = app.test_cli_runner().invoke(args=["upgrade-db"])
+    assert "made the tables" in result.output
+    with app.app_context():
+        assert db.has_tables() and db.schema_version() == len(db.MIGRATIONS)
+        assert db.query("SELECT * FROM habits") == []
+    # Run again: nothing to do, nothing lost.
+    assert "up to date" in app.test_cli_runner().invoke(args=["upgrade-db"]).output
+
+
+def test_render_runs_upgrade_db_before_the_app():
+    text = (Path(__file__).parent.parent / "render.yaml").read_text(encoding="utf-8")
+    assert "flask --app gawi upgrade-db && gunicorn" in text and "healthCheckPath: /healthz" in text
+    assert "init-db" not in text  # init-db deletes everything; never on the live site
+
+
 # ---------- The demo ----------
 
 def test_the_demo_has_history_and_a_badge(app):

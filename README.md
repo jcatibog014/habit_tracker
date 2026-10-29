@@ -31,6 +31,23 @@ python -m venv .venv
 Then open http://127.0.0.1:5004 in your browser.
 To look around first, press **Try the demo** on the login page.
 
+## How to put it online
+
+Gawi runs on **Render** (the website) and keeps its data in **Neon** (a free PostgreSQL database). Both have free plans.
+
+1. In Neon, make a project (region: Singapore). Copy its **pooled** connection string (it starts with `postgresql://`).
+2. On your computer, make the tables and your login in Neon:
+   ```
+   $env:DATABASE_URL = "postgresql://..."
+   .venv\Scripts\flask --app gawi upgrade-db
+   .venv\Scripts\flask --app gawi create-user yourname
+   Remove-Item Env:DATABASE_URL
+   ```
+3. In Render, choose **New → Blueprint** and pick this repo. Render reads `render.yaml`. Paste the Neon string when it asks for `DATABASE_URL`.
+4. Wait for "Live", then open the address Render shows (like `https://gawi.onrender.com`).
+
+After that, every merge into `main` updates the site by itself.
+
 ## How to test it
 
 ```
